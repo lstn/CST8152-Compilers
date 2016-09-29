@@ -8,14 +8,15 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 
 	if (init_capacity < sizeof(char)) return NULL; /* cannot have buffer with no or negative capacity */
 
+	pBuf = (Buffer*)calloc(1, sizeof(Buffer));
 	switch (o_mode){ /* checks for a valid o_mode: f, a or m and assigns proper values to mode and inc_factor */
 		case 'f':
-			o_mode = 0;
+			pBuf->mode = 0;
 			inc_factor = 0; /* always 0 in f mode */
 			break;
 		case 'a':
 			if (inc_factor > 0 && inc_factor < 256){ /* inc factor must be between 1 and 255 inclusive */
-				o_mode = 1;
+				pBuf->mode = 1;
 			}
 			else {
 				return NULL; 
@@ -23,7 +24,7 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 			break;
 		case 'm':
 			if (inc_factor > 0 && inc_factor < 101){ /* inc factor must be between 1 and 100 inclusive */
-				o_mode = -1;
+				pBuf->mode = -1;
 			}
 			else {
 				return NULL;
@@ -32,7 +33,7 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 		default:
 			return NULL;
 	}
-	pBuf = (Buffer*)calloc(1, sizeof(Buffer));
+
 	cb = (char*)malloc(init_capacity);
 
 	pBuf->cb_head = cb;
@@ -48,7 +49,6 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 	char **temp_loc;
 	short avail_space, new_capacity;
 	char new_inc;
-
 	pBD->r_flag = 0;
 	if (!b_isfull(pBD)){
 		pBD->cb_head[pBD->addc_offset] = symbol;
@@ -65,7 +65,8 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 		case 0:
 			return NULL;
 		case 1:
-			new_capacity = pBD->capacity + pBD->inc_factor * sizeof(char);
+			new_capacity = pBD->capacity + (pBD->inc_factor * sizeof(char));
+			if (new_capacity < 0) return NULL;
 			break;
 		default:
 			return NULL;
@@ -106,14 +107,14 @@ int b_isfull(Buffer * const pBD){
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
 	if (!pBD->capacity) return R_FAIL1; /* capacity must exist */
 
-	if ((short) (pBD->addc_offset*sizeof(char) + sizeof(char)) >= pBD->capacity) return 1; /* buffer is full */
+	if ((short) (pBD->addc_offset*sizeof(char) + sizeof(char)) > pBD->capacity) return 1; /* buffer is full */
 	return 0; /* buffer is not full*/
 }
 
 short b_size(Buffer * const pBD){
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
 	
-	return pBD->addc_offset+1;
+	return pBD->addc_offset;
 }
 
 short b_capacity(Buffer * const pBD){
@@ -130,6 +131,11 @@ short b_setmark(Buffer * const pBD, short mark){
 	return pBD->mark_offset;
 }
 
+short b_mark(Buffer * const pBD){
+	if (!pBD->mode && pBD->mode != 0) return R_FAIL1; /* check that offset exists */
+	return pBD->mark_offset;
+}
+
 int b_mode(Buffer * const pBD){
 	if (!pBD->mode && pBD->mode != 0) return R_FAIL1; /* check that offset exists */
 	return pBD->mode;
@@ -141,7 +147,25 @@ size_t  b_incfactor(Buffer * const pBD){
 }
 
 int b_load(FILE * const fi, Buffer * const pBD){
+	char to_add;
+	short added_num = 0;
+	if (!fi || !pBD) return R_FAIL1;
 
+	/*while ((to_add = (char) fgetc(fi)) != NULL || !feof(fi)){
+		if (b_addc(pBD, to_add) == NULL) return LOAD_FAIL;
+		++added_num;
+	}*/
+	while (1){
+		to_add = (char)fgetc(fi);
+		if (feof(fi))
+			break;
+		if (b_addc(pBD, to_add) == NULL){
+			return LOAD_FAIL;
+		}
+		++added_num;
+	}
+
+	return added_num;
 }
 
 int b_isempty(Buffer * const pBD){
@@ -166,12 +190,15 @@ char b_getc(Buffer * const pBD){
 		return R_FAIL1;
 	} else {
 		pBD->eob = 0;
-		return (char) ++pBD->getc_offset;
+		++pBD->getc_offset;
+		return pBD->cb_head[pBD->getc_offset-1];
 	}
 }
 
 int b_print(Buffer  * const pBD){
 	short temp_getc_offset;
+	int eob;
+	char symbol;
 
 	if (!pBD->getc_offset && pBD->getc_offset != 0) return R_FAIL1; /* check that offset exists */
 	if (!pBD->cb_head) return -1; /* checks character buffer is initialized */
@@ -179,32 +206,34 @@ int b_print(Buffer  * const pBD){
 	if (b_isempty(pBD)){
 		printf("The buffer is empty.\n");
 	}
-
 	temp_getc_offset = pBD->getc_offset;
 	pBD->getc_offset = 0;
 
-	while (!b_eob(pBD)){ /* loop until we reach the end of the buffer */
-		printf("%c", pBD->cb_head[b_getc(pBD)]);
-	}
+	do { /* loop until we reach the end of the buffer */
+		symbol = b_getc(pBD);
+		eob = b_eob(pBD);
+		if (!eob) printf("%c", symbol);
+	} while (!eob);
 
 	pBD->getc_offset = temp_getc_offset;
+
 	printf("\n");
 
-	return pBD->getc_offset + 1;
+	return pBD->getc_offset;
 }
 
 Buffer *b_pack(Buffer * const pBD){
 	char **temp_loc;
-
+	pBD->r_flag = 0;
 	temp_loc = &pBD->cb_head;
-	pBD->cb_head = realloc(pBD->cb_head, (pBD->getc_offset+1)*sizeof(char));
+
+	pBD->cb_head = realloc(pBD->cb_head, (pBD->addc_offset+1)*sizeof(char));
 	if (!pBD->cb_head) return NULL;
 	if (temp_loc != &pBD->cb_head){
 		pBD->r_flag = SET_R_FLAG; 
 	} else { pBD->r_flag = 0; }
 
 	temp_loc = NULL;
-
 	return pBD;
 }
 

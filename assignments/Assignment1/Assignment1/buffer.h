@@ -52,6 +52,7 @@ int b_isfull(Buffer * const pBD);
 short b_size(Buffer * const pBD);
 short b_capacity(Buffer * const pBD);
 short b_setmark(Buffer * const pBD, short mark);
+short b_mark(Buffer * const pBD);
 int b_mode(Buffer * const pBD);
 size_t  b_incfactor(Buffer * const pBD);
 int b_load(FILE * const fi, Buffer * const pBD);
