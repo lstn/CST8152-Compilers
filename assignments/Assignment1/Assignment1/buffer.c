@@ -53,18 +53,21 @@
 Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 	Buffer *pBuf;
 	char *cb;
+	unsigned char inc_factor_2;
 
+	inc_factor_2 = (inc_factor < 0) ? (unsigned)inc_factor : inc_factor;
+	printf("meme %d", inc_factor_2);
 	if (init_capacity < sizeof(char) || init_capacity < 0) return NULL; /* cannot have buffer with no or negative capacity */
-
+	printf("meme %d", inc_factor_2);
 	pBuf = (Buffer*)calloc(1, sizeof(Buffer)); /* allocate initial memory for Buffer */
 	if (!pBuf) return NULL;
 	switch (o_mode){ /* checks for a valid o_mode: f, a or m and assigns proper values to mode and inc_factor */
 		case 'f':
 			pBuf->mode = 0;
-			inc_factor = 0; /* always 0 in f mode */
+			inc_factor_2 = 0; /* always 0 in f mode */
 			break;
 		case 'a':
-			if (inc_factor > 0 && inc_factor < 256){ /* inc factor must be between 1 and 255 inclusive */
+			if (inc_factor_2 > 0 && inc_factor_2 < 256){ /* inc factor must be between 1 and 255 inclusive */
 				pBuf->mode = 1;
 			}
 			else {
@@ -72,7 +75,7 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 			}
 			break;
 		case 'm':
-			if (inc_factor > 0 && inc_factor < 101){ /* inc factor must be between 1 and 100 inclusive */
+			if (inc_factor_2 > 0 && inc_factor_2 < 101){ /* inc factor must be between 1 and 100 inclusive */
 				pBuf->mode = -1;
 			}
 			else {
@@ -88,7 +91,7 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 
 	pBuf->cb_head = cb;
 	pBuf->capacity = init_capacity;
-	pBuf->inc_factor = inc_factor;
+	pBuf->inc_factor = inc_factor_2;
 	pBuf->addc_offset = 0;
 	pBuf->getc_offset = 0;
 	pBuf->mark_offset = 0;
