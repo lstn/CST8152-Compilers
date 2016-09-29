@@ -48,7 +48,7 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 pBuffer b_addc(pBuffer const pBD, char symbol){
 	char **temp_loc;
 	short avail_space, new_capacity;
-	char new_inc;
+	unsigned short new_inc;
 	pBD->r_flag = 0;
 	if (!b_isfull(pBD)){
 		pBD->cb_head[pBD->addc_offset] = symbol;
@@ -59,7 +59,7 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 	switch (pBD->mode){
 		case -1:
 			avail_space = SHRT_MAX - pBD->capacity;
-			new_inc = (char) avail_space * (pBD->inc_factor * sizeof(char) / 100);
+			new_inc = (unsigned short) (avail_space * (pBD->inc_factor / 100.0));
 			new_capacity = pBD->capacity + new_inc;
 			break;
 		case 0:
@@ -142,7 +142,7 @@ int b_mode(Buffer * const pBD){
 }
 
 size_t  b_incfactor(Buffer * const pBD){
-	if (!pBD || !pBD->inc_factor || pBD->inc_factor < 0) return 256;
+	if (!pBD || (!pBD->inc_factor && pBD->inc_factor != 0 ) || pBD->inc_factor < 0) return 256;
 	return pBD->inc_factor;
 }
 
@@ -151,18 +151,11 @@ int b_load(FILE * const fi, Buffer * const pBD){
 	short added_num = 0;
 	if (!fi || !pBD) return R_FAIL1;
 
-	/*while ((to_add = (char) fgetc(fi)) != NULL || !feof(fi)){
-		if (b_addc(pBD, to_add) == NULL) return LOAD_FAIL;
-		++added_num;
-	}*/
-	while (1){
+	for (;;added_num++){
 		to_add = (char)fgetc(fi);
 		if (feof(fi))
 			break;
-		if (b_addc(pBD, to_add) == NULL){
-			return LOAD_FAIL;
-		}
-		++added_num;
+		if (b_addc(pBD, to_add) == NULL) return LOAD_FAIL;
 	}
 
 	return added_num;
@@ -228,6 +221,7 @@ Buffer *b_pack(Buffer * const pBD){
 	temp_loc = &pBD->cb_head;
 
 	pBD->cb_head = realloc(pBD->cb_head, (pBD->addc_offset+1)*sizeof(char));
+	pBD->capacity = pBD->addc_offset + 1;
 	if (!pBD->cb_head) return NULL;
 	if (temp_loc != &pBD->cb_head){
 		pBD->r_flag = SET_R_FLAG; 
