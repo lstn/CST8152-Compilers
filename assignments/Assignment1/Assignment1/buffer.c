@@ -54,7 +54,7 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 	Buffer *pBuf;
 	char *cb;
 
-	if (init_capacity < sizeof(char)) return NULL; /* cannot have buffer with no or negative capacity */
+	if (init_capacity < sizeof(char) || init_capacity < 0) return NULL; /* cannot have buffer with no or negative capacity */
 
 	pBuf = (Buffer*)calloc(1, sizeof(Buffer)); /* allocate initial memory for Buffer */
 	if (!pBuf) return NULL;
@@ -109,8 +109,7 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 *  Algorithm:
 *					 +IF Buffer is full
 *					  >ADD `symbol` to Buffer character buffer at position `addc_offset`
-*					  >IF `addc_offset` not equal `SHRT_MAX`
-*					   >INCREMENT `addc_offset` by 1
+*					  >INCREMENT `addc_offset` by 1
 *					  >RETURN Buffer pointer
 *					 +ELIF Buffer `mode` is -1
 *					  >ASSIGN (`SHRT_MAX` - `capacity) to `avail_space`
@@ -131,8 +130,7 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 *					 +ELSE
 *					  >ASSIGN `SET_R_FLAG0` to Buffer member `r_flag` to indicate that memory location has not changed
 *					 +ADD `symbol` to Buffer character buffer at position `addc_offset`
-*					 +IF `addc_offset` not equal `SHRT_MAX`
-*					  >INCREMENT Buffer `addc_offset` by 1
+*					 +INCREMENT Buffer `addc_offset` by 1
 *					 +ASSIGN `new_capacity` to Buffer `capacity`
 *					 +RETURN pointer to Buffer
 */
@@ -143,10 +141,13 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 
 	if (!pBD || !pBD->cb_head) return NULL;
 
+
 	pBD->r_flag = 0;
+	if (pBD->addc_offset == SHRT_MAX) return NULL;
 	if (!b_isfull(pBD)){
 		b_cbhead(pBD)[pBD->addc_offset] = symbol;
-		if (pBD->addc_offset != SHRT_MAX) ++pBD->addc_offset;
+		
+		++pBD->addc_offset;
 		return pBD; /* No need to continue. */
 	}
 
@@ -157,22 +158,26 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 			new_capacity = pBD->capacity + new_inc;
 			break;
 		case 1:
-			new_capacity = pBD->capacity + (pBD->inc_factor * sizeof(char));
+			if (pBD->addc_offset == SHRT_MAX){
+				new_capacity = pBD->addc_offset;
+			} else{
+				new_capacity = pBD->capacity + (pBD->inc_factor * sizeof(char));
+			}
 			if (new_capacity < 0) return NULL;
 			break;
 		default: /* No need for a case 0 since it would do the same thing as the default case. */
 			return NULL;
 	}
+	if (new_capacity != pBD->capacity) {
+		temp_loc = &pBD->cb_head; 
+		pBD->cb_head = realloc(pBD->cb_head, new_capacity);
+		if (b_cbhead(pBD) == NULL) return NULL; /* realloc failed */
+		pBD->r_flag = (temp_loc != &pBD->cb_head) ? SET_R_FLAG : SET_R_FLAG0; /* check if memory loc has changed */
 
-	temp_loc = &pBD->cb_head; 
-	pBD->cb_head = realloc(pBD->cb_head, new_capacity);
-	if (b_cbhead(pBD) == NULL) return NULL; /* realloc failed */
-	pBD->r_flag = (temp_loc != &pBD->cb_head) ? SET_R_FLAG : SET_R_FLAG0; /* check if memory loc has changed */
-
-	temp_loc = NULL; /* dangling pointer */
-
+		temp_loc = NULL; /* dangling pointer */
+	}
 	b_cbhead(pBD)[pBD->addc_offset] = symbol; /* actually add the character to the array */
-	if (pBD->addc_offset != SHRT_MAX) ++pBD->addc_offset;
+	++pBD->addc_offset;
 	pBD->capacity = new_capacity;
 	return pBD;
 }
@@ -496,11 +501,13 @@ Buffer *b_pack(Buffer * const pBD){
 
 	if (!pBD || !pBD->cb_head) return NULL;
 
+	if (pBD->addc_offset == SHRT_MAX) return NULL;
+
 	pBD->r_flag = 0;
 	temp_loc = &pBD->cb_head;
 
 	pBD->cb_head = realloc(pBD->cb_head, (pBD->addc_offset+1)*sizeof(char));
-	pBD->capacity = pBD->addc_offset + ((pBD->addc_offset != SHRT_MAX) ? 1 : 0);
+	pBD->capacity = pBD->addc_offset + 1;
 
 	if (!b_cbhead(pBD)) { 
 		temp_loc = NULL; /* dangling pointer */

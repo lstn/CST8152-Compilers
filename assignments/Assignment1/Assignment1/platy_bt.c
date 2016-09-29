@@ -16,12 +16,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <crtdbg.h>
 #include "buffer.h"
 
-#define _CRTDBG_MAP_ALLOC
 /* constant definitions */
-#define INIT_CAPACITY SHRT_MAX /* initial buffer capacity */
+#define INIT_CAPACITY 200 /* initial buffer capacity */
 #define INC_FACTOR 15       /* increment factor */
 
 /*check for ANSI C compliancy */
@@ -46,13 +44,11 @@ int main(int argc, char **argv){
    int loadsize = 0;     /*the size of the file loaded in the buffer */
    int ansi_c = !ANSI_C; /* ANSI C compliancy flag */
 
-   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 /* Check if the compiler option is set to compile ANSI C */
 /* __DATE__, __TIME__, __LINE__, __FILE__, __STDC__ are predefined preprocessor macros*/
   if(ansi_c){
     err_printf("Date: %s  Time: %s",__DATE__, __TIME__);
     err_printf("ERROR: Compiler is not ANSI C compliant!\n");
-	_CrtDumpMemoryLeaks();
     exit(1);
   }
 
@@ -63,7 +59,6 @@ int main(int argc, char **argv){
      err_printf("\nRuntime error at line %d in file %s\n", __LINE__, __FILE__);
 	  err_printf("%s\b\b\b\b%s%s",argv[0],": ","Missing parameters.");
 	  err_printf("Usage: platybt source_file_name mode");
-	  _CrtDumpMemoryLeaks();
 	  exit(1);
 	}
 	
@@ -72,21 +67,18 @@ int main(int argc, char **argv){
 	 case 'f': case 'a': case 'm': break;
 	 default:
 	  err_printf("%s%s%s",argv[0],": ","Wrong mode parameter.");
-	  _CrtDumpMemoryLeaks();
 	  exit(1);
 	}
 /*create the input buffer */
     ptr_Buffer = b_create(INIT_CAPACITY,INC_FACTOR,*argv[2]);
 	if (ptr_Buffer == NULL){
 		err_printf("%s%s%s",argv[0],": ","Could not create buffer.");
-		_CrtDumpMemoryLeaks();
 		exit(1);
 	}
 
 /* open the source file */
 	if ((fi = fopen(argv[1],"r")) == NULL){
 		err_printf("%s%s%s%s",argv[0],": ", "Cannot open file: ",argv[1]);
-		_CrtDumpMemoryLeaks();
 		exit (1);
 	}
 
@@ -128,7 +120,6 @@ int main(int argc, char **argv){
 */
   ptr_Buffer = NULL;
 /*return success */
-  _CrtDumpMemoryLeaks();
   return (0);
 }
 
