@@ -109,7 +109,8 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 *  Algorithm:
 *					 +IF Buffer is full
 *					  >ADD `symbol` to Buffer character buffer at position `addc_offset`
-*					  >INCREMENT `addc_offset` by 1
+*					  >IF `addc_offset` not equal `SHRT_MAX`
+*					   >INCREMENT `addc_offset` by 1
 *					  >RETURN Buffer pointer
 *					 +ELIF Buffer `mode` is -1
 *					  >ASSIGN (`SHRT_MAX` - `capacity) to `avail_space`
@@ -130,7 +131,8 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 *					 +ELSE
 *					  >ASSIGN `SET_R_FLAG0` to Buffer member `r_flag` to indicate that memory location has not changed
 *					 +ADD `symbol` to Buffer character buffer at position `addc_offset`
-*					 +INCREMENT Buffer `addc_offset` by 1
+*					 +IF `addc_offset` not equal `SHRT_MAX`
+*					  >INCREMENT Buffer `addc_offset` by 1
 *					 +ASSIGN `new_capacity` to Buffer `capacity`
 *					 +RETURN pointer to Buffer
 */
@@ -144,7 +146,7 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 	pBD->r_flag = 0;
 	if (!b_isfull(pBD)){
 		b_cbhead(pBD)[pBD->addc_offset] = symbol;
-		++pBD->addc_offset;
+		if (pBD->addc_offset != SHRT_MAX) ++pBD->addc_offset;
 		return pBD; /* No need to continue. */
 	}
 
@@ -170,7 +172,7 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 	temp_loc = NULL; /* dangling pointer */
 
 	b_cbhead(pBD)[pBD->addc_offset] = symbol; /* actually add the character to the array */
-	++pBD->addc_offset;
+	if (pBD->addc_offset != SHRT_MAX) ++pBD->addc_offset;
 	pBD->capacity = new_capacity;
 	return pBD;
 }
@@ -498,7 +500,7 @@ Buffer *b_pack(Buffer * const pBD){
 	temp_loc = &pBD->cb_head;
 
 	pBD->cb_head = realloc(pBD->cb_head, (pBD->addc_offset+1)*sizeof(char));
-	pBD->capacity = pBD->addc_offset + 1;
+	pBD->capacity = pBD->addc_offset + ((pBD->addc_offset != SHRT_MAX) ? 1 : 0);
 
 	if (!b_cbhead(pBD)) { 
 		temp_loc = NULL; /* dangling pointer */
