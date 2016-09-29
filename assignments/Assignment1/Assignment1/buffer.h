@@ -30,17 +30,19 @@
 /* You may add your own constant definitions here */
 #  define R_FAIL1	-1       /* fail return value */
 #  define R_FAIL2	-2       /* fail return value */
+#  define R_FAIL_INCFACTOR 256 /* value to return in b_incfactor on failure*/
 #  define R_SUCCESS0 0		 /* success return value */
 #  define LOAD_FAIL -2       /* load fail error */
-#  define SET_R_FLAG 1       /* realloc flag set value */
+#  define SET_R_FLAG 1       /* realloc flag set value changed*/
+#  define SET_R_FLAG0 0		 /* realloc flag set value unchanged*/
 
 #  ifndef B_FULL
 #  define B_FULL
 #    define b_isfull(pBD) \
 		( \
-			(!pBD->addc_offset && pBD->addc_offset != 0) ? R_FAIL1 : \
-			(!pBD->capacity) ? R_FAIL1 : \
-			((short)(pBD->addc_offset*sizeof(char) + sizeof(char)) > pBD->capacity) ? 1 : 0 \
+			(!pBD->addc_offset && pBD->addc_offset != 0) ? R_FAIL1 : /* check that offset exists */\
+			(!pBD->capacity) ? R_FAIL1 : /* check that capacity exists and is not 0 */\
+			((short)(pBD->addc_offset*sizeof(char) + sizeof(char)) > pBD->capacity) ? 1 : 0 /* 1 true 0 false */\
 		) 
 #  endif
 
