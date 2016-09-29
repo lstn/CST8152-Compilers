@@ -1,33 +1,52 @@
-/* REPLACE the header below with your file header (see CST8152_ASSAMG.pdf for details).
- * File Name: buffer.h
- * Version: 1.16.2
- * Author: S^R
- * Date: 6 September 2016
- * Preprocessor directives, type declarations and prototypes necessary for buffer implementation 
- * as required for CST8152, Assignment #1, Fall 2016.
- * The file is not completed.
- * You must add your function declarations (prototypes).
- * You must also add your constant definitions and macros,if any.
- */
+/* File name:	buffer.h
+*  Compiler:	MS Visual Studio 2013
+*  Author:		Lucas Estienne, 040 819 959
+*  Course:		CST 8152 - Compilers, Lab Section 012
+*  Assignment:	01
+*  Date:		29 September 2016
+*  Professor:   Svillen Ranev
+*  Purpose:		This contains macro definitions, as well as declarations and prototypes necessary for
+*				the Buffer component of the Compiler.
+*  Function List: b_create(), b_addc(), b_reset(), b_free(), b_isfull(), b_size(), b_capacity(),
+*				  b_setmark(), b_mark(), b_mode(), b_incfactor(), b_load(), b_isempty(), b_eob(),
+*				  b_getc(), b_print(), b_pack(), b_rflag(), b_retract(), b_retract_to_mark(),
+*				  b_getcoffset(), b_cbhead()
+*  Constants:	R_FAIL1, R_FAIL2, R_SUCESS0, LOAD_FAIL, SET_R_FLAG, B_FULL
+*  Macros:		b_isfull(pDB)
+*/
 #ifndef BUFFER_H_
-#define BUFFER_H_
+#  define BUFFER_H_
 
 /*#pragma warning(1:4001) *//*to enforce C89 type comments  - to make //comments an warning */
 
 /*#pragma warning(error:4001)*//* to enforce C89 comments - to make // comments an error */
 
 /* standard header files */
-#include <stdio.h>  /* standard input/output */
-#include <malloc.h> /* for dynamic memory allocation*/
-#include <limits.h> /* implementation-defined data type ranges and limits */
+#  include <stdio.h>  /* standard input/output */
+#  include <malloc.h> /* for dynamic memory allocation*/
+#  include <limits.h> /* implementation-defined data type ranges and limits */
 
 /* constant definitions */
 /* You may add your own constant definitions here */
-#define R_FAIL1 -1         /* fail return value */
-#define R_FAIL2 -2         /* fail return value */
-#define LOAD_FAIL -2       /* load fail error */
-#define SET_R_FLAG 1       /* realloc flag set value */
+#  define R_FAIL1	-1       /* fail return value */
+#  define R_FAIL2	-2       /* fail return value */
+#  define R_SUCCESS0 0		 /* success return value */
+#  define LOAD_FAIL -2       /* load fail error */
+#  define SET_R_FLAG 1       /* realloc flag set value */
 
+#  ifndef B_FULL
+#  define B_FULL
+#    define b_isfull(pBD) \
+		( \
+			(!pBD->addc_offset && pBD->addc_offset != 0) ? R_FAIL1 : \
+			(!pBD->capacity) ? R_FAIL1 : \
+			((short)(pBD->addc_offset*sizeof(char) + sizeof(char)) > pBD->capacity) ? 1 : 0 \
+		) 
+#  endif
+
+/* Uncomment the below line to use the b_isfull() function in the compiled code instead of the macro. */
+/*#  undef B_FULL*/ 
+/* If the above line is commented the macro b_isfull will be used in the compiled code instead of the function. */
 
 /* user data type declarations */
 typedef struct BufferDescriptor {
@@ -43,12 +62,12 @@ typedef struct BufferDescriptor {
 } Buffer, *pBuffer;
 /*typedef Buffer *pBuffer;*/
 
+
 /* function declarations */
 Buffer * b_create(short init_capacity, char inc_factor, char o_mode);
 pBuffer b_addc(pBuffer const pBD, char symbol);
 int b_reset(Buffer * const pBD);
 void b_free(Buffer * const pBD);
-int b_isfull(Buffer * const pBD);
 short b_size(Buffer * const pBD);
 short b_capacity(Buffer * const pBD);
 short b_setmark(Buffer * const pBD, short mark);
@@ -71,6 +90,12 @@ Place your function declarations here.
 Do not include the function header comments here.
 Place them in the buffer.c file
 */
+#  ifndef B_FULL
+#    ifdef b_isfull
+#      undef b_isfull
+#    endif
+int b_isfull(Buffer * const pBD);
+#  endif
 
 #endif
 

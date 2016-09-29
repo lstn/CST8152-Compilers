@@ -1,3 +1,16 @@
+/* File name:	buffer.c
+*  Compiler:	MS Visual Studio 2013
+*  Author:		Lucas Estienne, 040 819 959
+*  Course:		CST 8152 - Compilers, Lab Section 012
+*  Assignment:	01
+*  Date:		29 September 2016
+*  Professor:   Svillen Ranev
+*  Purpose:		This implements the functions required for the Buffer component of the Compiler.
+*  Function List: b_create(), b_addc(), b_reset(), b_free(), b_isfull(), b_size(), b_capacity(),
+*				  b_setmark(), b_mark(), b_mode(), b_incfactor(), b_load(), b_isempty(), b_eob(),
+*				  b_getc(), b_print(), b_pack(), b_rflag(), b_retract(), b_retract_to_mark(),
+*				  b_getcoffset(), b_cbhead()
+*/
 #include "buffer.h"
 
 
@@ -51,7 +64,7 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 	unsigned short new_inc;
 	pBD->r_flag = 0;
 	if (!b_isfull(pBD)){
-		pBD->cb_head[pBD->addc_offset] = symbol;
+		b_cbhead(pBD)[pBD->addc_offset] = symbol;
 		++pBD->addc_offset;
 		return pBD;
 	}
@@ -73,12 +86,12 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 	}
 	temp_loc = &pBD->cb_head;
 	pBD->cb_head = realloc(pBD->cb_head, new_capacity);
-	if (!pBD->cb_head) return NULL;
+	if (!b_cbhead(pBD)) return NULL;
 	if (temp_loc != &pBD->cb_head) pBD->r_flag = SET_R_FLAG;
 
 	temp_loc = NULL;
 
-	pBD->cb_head[pBD->addc_offset] = symbol;
+	b_cbhead(pBD)[pBD->addc_offset] = symbol;
 	++pBD->addc_offset;
 	pBD->capacity = new_capacity;
 	return pBD;
@@ -96,20 +109,22 @@ int b_reset(Buffer * const pBD){
 }
 
 void b_free(Buffer * const pBD){
-	if (pBD->cb_head){
+	if (!pBD) return;
+	if (b_cbhead(pBD)){
 		free(pBD->cb_head);
 		pBD->cb_head = NULL;
 	}
 	free(pBD);
 }
 
+#  ifndef B_FULL
 int b_isfull(Buffer * const pBD){
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
 	if (!pBD->capacity) return R_FAIL1; /* capacity must exist */
 
-	if ((short) (pBD->addc_offset*sizeof(char) + sizeof(char)) > pBD->capacity) return 1; /* buffer is full */
-	return 0; /* buffer is not full*/
+	return ((short)(pBD->addc_offset*sizeof(char) + sizeof(char)) > pBD->capacity) ? 1 : 0;
 }
+#  endif
 
 short b_size(Buffer * const pBD){
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
@@ -184,7 +199,7 @@ char b_getc(Buffer * const pBD){
 	} else {
 		pBD->eob = 0;
 		++pBD->getc_offset;
-		return pBD->cb_head[pBD->getc_offset-1];
+		return b_cbhead(pBD)[pBD->getc_offset - 1];
 	}
 }
 
@@ -194,7 +209,7 @@ int b_print(Buffer  * const pBD){
 	char symbol;
 
 	if (!pBD->getc_offset && pBD->getc_offset != 0) return R_FAIL1; /* check that offset exists */
-	if (!pBD->cb_head) return -1; /* checks character buffer is initialized */
+	if (!b_cbhead(pBD)) return -1; /* checks character buffer is initialized */
 
 	if (b_isempty(pBD)){
 		printf("The buffer is empty.\n");
@@ -222,7 +237,7 @@ Buffer *b_pack(Buffer * const pBD){
 
 	pBD->cb_head = realloc(pBD->cb_head, (pBD->addc_offset+1)*sizeof(char));
 	pBD->capacity = pBD->addc_offset + 1;
-	if (!pBD->cb_head) return NULL;
+	if (!b_cbhead(pBD)) return NULL;
 	if (temp_loc != &pBD->cb_head){
 		pBD->r_flag = SET_R_FLAG; 
 	} else { pBD->r_flag = 0; }
@@ -259,6 +274,6 @@ short b_getcoffset(Buffer * const pBD){
 }
 
 char * b_cbhead(Buffer * const pBD){
-	if (pBD->cb_head) return pBD->cb_head;
+	if (pBD && pBD->cb_head) return pBD->cb_head;
 	return NULL;
 }
