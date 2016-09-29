@@ -230,7 +230,7 @@ void b_free(Buffer * const pBD){
 *  Algorithm:
 */
 int b_isfull(Buffer * const pBD){
-	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
+	if (!pBD || (!pBD->addc_offset && pBD->addc_offset != 0)) return R_FAIL1; /* check that offset exists */
 	if (!pBD->capacity) return R_FAIL1; /* capacity must exist and not be 0 */
 
 	return ((short)(pBD->addc_offset*sizeof(char) + sizeof(char)) > pBD->capacity) ? 1 : 0;
@@ -363,6 +363,7 @@ int b_load(FILE * const fi, Buffer * const pBD){
 	return added_num;
 }
 
+#  ifndef B_EMPTY /* checks if the user chose to undef the B_FULL macro in order to use the function instead */
 /* Purpose:			 Returns whether the passed Buffer character buffer is empty. Returns
 *					 R_FAIL1 if a runtime error occurs.
 *  Author:			 Lucas Estienne
@@ -377,6 +378,7 @@ int b_isempty(Buffer * const pBD){
 
 	return (pBD->addc_offset == 0) ? 1 : 0; /* 1 if empty, 0 if not empty */
 }
+#  endif
 
 /* Purpose:			 Returns the value of the eob member of the passed Buffer. Returns
 *					 R_FAIL1 if a runtime error occurs.

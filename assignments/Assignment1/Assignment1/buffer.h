@@ -7,12 +7,12 @@
 *  Professor:   Svillen Ranev
 *  Purpose:		This contains macro definitions, as well as declarations and prototypes necessary for
 *				the Buffer component of the Compiler.
-*  Function List: b_create(), b_addc(), b_reset(), b_free(), b_isfull(), b_size(), b_capacity(),
-*				  b_setmark(), b_mark(), b_mode(), b_incfactor(), b_load(), b_isempty(), b_eob(),
+*  Function List: b_create(), b_addc(), b_reset(), b_free(), b_size(), b_capacity(),
+*				  b_setmark(), b_mark(), b_mode(), b_incfactor(), b_load(), b_eob(),
 *				  b_getc(), b_print(), b_pack(), b_rflag(), b_retract(), b_retract_to_mark(),
-*				  b_getcoffset(), b_cbhead()
+*				  b_getcoffset(), b_cbhead(), b_isfull(), b_isempty()
 *  Constants:	R_FAIL1, R_FAIL2, R_SUCESS0, LOAD_FAIL, SET_R_FLAG, B_FULL
-*  Macros:		b_isfull(pDB)
+*  Macros:		b_isfull(pDB), b_isempty(pDB)
 */
 #ifndef BUFFER_H_
 #  define BUFFER_H_
@@ -40,15 +40,24 @@
 #  define B_FULL
 #    define b_isfull(pBD) \
 		( \
-			(!pBD->addc_offset && pBD->addc_offset != 0) ? R_FAIL1 : /* check that offset exists */\
+			(!pBD || (!pBD->addc_offset && pBD->addc_offset != 0)) ? R_FAIL1 : /* check that offset exists */\
 			(!pBD->capacity) ? R_FAIL1 : /* check that capacity exists and is not 0 */\
 			((short)(pBD->addc_offset*sizeof(char) + sizeof(char)) > pBD->capacity) ? 1 : 0 /* 1 true 0 false */\
 		) 
 #  endif
+#  ifndef B_EMPTY
+#  define B_EMPTY
+#    define b_isempty(pBD) \
+		( \
+			(!pBD || (!pBD->addc_offset && pBD->addc_offset != 0)) ? R_FAIL1 : /* check that offset exists */\
+			(pBD->addc_offset == 0) ? 1 : 0 /* 1 true 0 false */\
+		) 
+#  endif
 
-/* Uncomment the below line to use the b_isfull() function in the compiled code instead of the macro. */
+/* Uncomment any of the below line to use the function in the compiled code instead of the macro. */
 /*#  undef B_FULL*/ 
-/* If the above line is commented the macro b_isfull will be used in the compiled code instead of the function. */
+/*#  undef B_EMPTY*/
+/* If any of the above line is commented the macro will be used in the compiled code instead of the function. */
 
 /* user data type declarations */
 typedef struct BufferDescriptor {
@@ -77,7 +86,6 @@ short b_mark(Buffer * const pBD);
 int b_mode(Buffer * const pBD);
 size_t  b_incfactor(Buffer * const pBD);
 int b_load(FILE * const fi, Buffer * const pBD);
-int b_isempty(Buffer * const pBD);
 int b_eob(Buffer * const pBD);
 char b_getc(Buffer * const pBD);
 int b_print(Buffer  * const pBD);
@@ -92,11 +100,17 @@ Place your function declarations here.
 Do not include the function header comments here.
 Place them in the buffer.c file
 */
-#  ifndef B_FULL
+#  ifndef B_FULL /* if user chooses to not use B_FULL macro, declare prototype for b_isfull function and undefine the macro */
 #    ifdef b_isfull
 #      undef b_isfull
 #    endif
 int b_isfull(Buffer * const pBD);
+#  endif
+#  ifndef B_EMPTY /* if user chooses to not use B_FULL macro, declare prototype for b_isempty function and undefine the macro */
+#    ifdef b_isempty
+#      undef b_isempty
+#    endif
+int b_isempty(Buffer * const pBD);
 #  endif
 
 #endif
