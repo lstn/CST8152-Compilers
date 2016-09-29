@@ -14,7 +14,14 @@
 #include "buffer.h"
 
 
-
+/* Purpose:			 
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions: 
+*  Parameters:		 
+*  Return value:	 
+*  Algorithm:		 
+*/
 Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 	Buffer *pBuf;
 	char *cb;
@@ -58,6 +65,14 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 pBuffer b_addc(pBuffer const pBD, char symbol){
 	char **temp_loc;
 	short avail_space, new_capacity;
@@ -97,6 +112,14 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 	return pBD;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 int b_reset(Buffer * const pBD){
 	if (!pBD) return R_FAIL1;
 
@@ -108,6 +131,14 @@ int b_reset(Buffer * const pBD){
 	return 0;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 void b_free(Buffer * const pBD){
 	if (!pBD) return;
 	if (b_cbhead(pBD)){
@@ -117,7 +148,15 @@ void b_free(Buffer * const pBD){
 	free(pBD);
 }
 
-#  ifndef B_FULL
+#  ifndef B_FULL /* checks if the user chose to undef the B_FULL macro in order to use the function instead */
+/* Purpose:			 
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions: 
+*  Parameters:		 
+*  Return value:	 
+*  Algorithm:
+*/
 int b_isfull(Buffer * const pBD){
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
 	if (!pBD->capacity) return R_FAIL1; /* capacity must exist */
@@ -126,17 +165,41 @@ int b_isfull(Buffer * const pBD){
 }
 #  endif
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 short b_size(Buffer * const pBD){
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
 	
 	return pBD->addc_offset;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 short b_capacity(Buffer * const pBD){
 	if (!pBD->capacity) return R_FAIL1;
 	return pBD->capacity;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 short b_setmark(Buffer * const pBD, short mark){
 	if (!pBD) return R_FAIL1;
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
@@ -146,21 +209,53 @@ short b_setmark(Buffer * const pBD, short mark){
 	return pBD->mark_offset;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 short b_mark(Buffer * const pBD){
 	if (!pBD->mode && pBD->mode != 0) return R_FAIL1; /* check that offset exists */
 	return pBD->mark_offset;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 int b_mode(Buffer * const pBD){
 	if (!pBD->mode && pBD->mode != 0) return R_FAIL1; /* check that offset exists */
 	return pBD->mode;
 }
 
-size_t  b_incfactor(Buffer * const pBD){
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
+size_t b_incfactor(Buffer * const pBD){
 	if (!pBD || (!pBD->inc_factor && pBD->inc_factor != 0 ) || pBD->inc_factor < 0) return 256;
 	return pBD->inc_factor;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 int b_load(FILE * const fi, Buffer * const pBD){
 	char to_add;
 	short added_num = 0;
@@ -176,6 +271,14 @@ int b_load(FILE * const fi, Buffer * const pBD){
 	return added_num;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 int b_isempty(Buffer * const pBD){
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL1; /* check that offset exists */
 
@@ -183,12 +286,28 @@ int b_isempty(Buffer * const pBD){
 	return 0; /* buffer not element */
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 int b_eob(Buffer * const pBD){
 	if (!pBD->eob && pBD->eob != 0) return R_FAIL1; /* checks eob exists */
 
 	return pBD->eob;
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 char b_getc(Buffer * const pBD){
 	if (!pBD->addc_offset && pBD->addc_offset != 0) return R_FAIL2; /* check that offset exists */
 	if (!pBD->getc_offset && pBD->getc_offset != 0) return R_FAIL2; /* check that offset exists */
@@ -203,6 +322,14 @@ char b_getc(Buffer * const pBD){
 	}
 }
 
+/* Purpose:
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:
+*  Algorithm:
+*/
 int b_print(Buffer  * const pBD){
 	short temp_getc_offset;
 	int eob;
@@ -230,14 +357,40 @@ int b_print(Buffer  * const pBD){
 	return pBD->getc_offset;
 }
 
+/* Purpose:			 Packs the passed Buffer by shrinking (or in some cases, expanding) the 
+*					 buffer. The new capacity is the current size + 1.  Returns NULL if a
+*                    runtime error occurs.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions: realloc(), b_cbhead()
+*  Parameters:		 [pBD: (Buffer * const)]
+*  Return value:	 [ (Buffer *), (NULL) ]
+*  Algorithm:		 
+*					 +ASSIGN address of Buffer character buffer to temp_loc
+*					 +REALLOC memory for Buffer character buffer to current size+1
+*                    +IF failed reallocation
+*                     >RETURN NULL
+*                    +ELIF temp_loc does not match address of Buffer character buffer after reallocation
+*					  >ASSIGN SET_R_FLAG to Buffer r_flag to indicate that memory location has changed
+*					 +ELSE
+*					  >ASSIGN 0 to Buffer r_flag to indicate that memory location has not changed
+*					 +RETURN pointer to Buffer
+*/
 Buffer *b_pack(Buffer * const pBD){
 	char **temp_loc;
+
+	if (!pBD || !pBD->cb_head) return NULL;
+
 	pBD->r_flag = 0;
 	temp_loc = &pBD->cb_head;
 
 	pBD->cb_head = realloc(pBD->cb_head, (pBD->addc_offset+1)*sizeof(char));
 	pBD->capacity = pBD->addc_offset + 1;
-	if (!b_cbhead(pBD)) return NULL;
+
+	if (!b_cbhead(pBD)) { 
+		temp_loc = NULL; /* dangling pointer */
+		return NULL; 
+	}
 	if (temp_loc != &pBD->cb_head){
 		pBD->r_flag = SET_R_FLAG; 
 	} else { pBD->r_flag = 0; }
@@ -246,34 +399,80 @@ Buffer *b_pack(Buffer * const pBD){
 	return pBD;
 }
 
+/* Purpose:			 Returns the r_flag member of the passed Buffer. Returns R_FAIL1
+*					 if a runtime error occurs.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions: none
+*  Parameters:		 [pBD: (Buffer * const)]
+*  Return value:	 [ (char, values: {0, 1}), (R_FAIL1) ]
+*  Algorithm:
+*/
 char b_rflag(Buffer * const pBD){
-	if (!pBD->r_flag && pBD->r_flag != 0) return R_FAIL1; /* check that offset exists */
+	if (!pBD || (!pBD->r_flag && pBD->r_flag != 0)) return R_FAIL1; /* check that offset exists */
 
 	return pBD->r_flag;
 }
 
+/* Purpose:			 Retracts the getc_offset member of the passed Buffer by 1 position.
+*					 Returns R_FAIL1 if a runtime error occurs.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions: none
+*  Parameters:		 [pBD: (Buffer * const)]
+*  Return value:	 [ (short), (R_FAIL1) ]
+*  Algorithm:
+*/
 short b_retract(Buffer * const pBD){
-	if (!pBD->getc_offset && pBD->getc_offset != 0) return R_FAIL1; /* check that offset exists */
+	if (!pBD || (!pBD->getc_offset && pBD->getc_offset != 0)) return R_FAIL1; /* check that offset exists */
 	if (pBD->getc_offset - 1 < 0) return R_FAIL1; /* can't go negative */
 
 	return --pBD->getc_offset;
 }
 
+/* Purpose:			 Retracts the getc_offset member of the passed Buffer to the position of
+*                    the mark_offset member of the passed Buffer. Returns R_FAIL1 if a runtime
+*					 error occurs.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions: none
+*  Parameters:		 [pBD: (Buffer * const)]
+*  Return value:	 [ (short), (R_FAIL1) ]
+*  Algorithm:
+*/
 short b_retract_to_mark(Buffer * const pBD){
-	if (!pBD->getc_offset && pBD->getc_offset != 0) return R_FAIL1; /* check that offset exists */
+	if (!pBD || (!pBD->getc_offset && pBD->getc_offset != 0)) return R_FAIL1; /* check that offset exists */
 	if (!pBD->mark_offset || pBD->mark_offset < 0) return R_FAIL1; /* can't go negative */
 
 	pBD->getc_offset = pBD->mark_offset;
 	return pBD->getc_offset;
 }
 
+/* Purpose:			 Returns the getc_offset member of the passed Buffer. Returns R_FAIL1
+*					 if a runtime error occurs.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions: none
+*  Parameters:		 [pBD: (Buffer * const)]
+*  Return value:	 [ (short), (R_FAIL1) ]
+*  Algorithm:
+*/
 short b_getcoffset(Buffer * const pBD){
-	if (!pBD->getc_offset && pBD->getc_offset != 0) return R_FAIL1; /* check that offset exists */
+	if (!pBD || (!pBD->getc_offset && pBD->getc_offset != 0)) return R_FAIL1; /* check that offset exists */
 
 	return pBD->getc_offset;
 }
 
+/* Purpose:			 Returns the pointer to the beginning of the character buffer array in the passed
+*					 Buffer. Returns NULL if a runtime error occurs.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 9/29/2016]
+*  Called functions: none
+*  Parameters:       [pBD: (Buffer * const)]
+*  Return value:	 [ (char *), (NULL) ]
+*  Algorithm:
+*/
 char * b_cbhead(Buffer * const pBD){
 	if (pBD && pBD->cb_head) return pBD->cb_head;
-	return NULL;
+	return NULL; /* returns NULL if pBD or cb_head are not defined */
 }
