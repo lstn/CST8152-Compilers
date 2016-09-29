@@ -136,14 +136,14 @@ Buffer * b_create(short init_capacity, char inc_factor, char o_mode){
 */
 pBuffer b_addc(pBuffer const pBD, char symbol){
 	char **temp_loc;
-	short avail_space, new_capacity;
-	unsigned short new_inc;
+	short avail_space;
+	unsigned short new_inc, new_capacity;
 
 	if (!pBD || !pBD->cb_head) return NULL;
 
 
 	pBD->r_flag = 0;
-	if (pBD->addc_offset == SHRT_MAX) return NULL;
+	if (pBD->addc_offset >= SHRT_MAX) return NULL;
 	if (!b_isfull(pBD)){
 		b_cbhead(pBD)[pBD->addc_offset] = symbol;
 		
@@ -155,15 +155,20 @@ pBuffer b_addc(pBuffer const pBD, char symbol){
 		case -1:
 			avail_space = SHRT_MAX - pBD->capacity;
 			new_inc = (unsigned short) (avail_space * (pBD->inc_factor / 100.0));
+			if (avail_space > 0 && new_inc == 0 && pBD->inc_factor != 0){
+				new_inc++; /* if there is space and the increase was 0, that means it's a truncated 1 in this mode*/
+			}
 			new_capacity = pBD->capacity + new_inc;
+			
+			if (new_capacity >= SHRT_MAX) new_capacity = SHRT_MAX;
 			break;
 		case 1:
-			if (pBD->addc_offset == SHRT_MAX){
+			if (pBD->addc_offset >= SHRT_MAX){
 				new_capacity = pBD->addc_offset;
 			} else{
 				new_capacity = pBD->capacity + (pBD->inc_factor * sizeof(char));
 			}
-			if (new_capacity < 0) return NULL;
+			if (new_capacity < 0 || new_capacity >= SHRT_MAX) return NULL;
 			break;
 		default: /* No need for a case 0 since it would do the same thing as the default case. */
 			return NULL;

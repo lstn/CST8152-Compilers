@@ -19,8 +19,8 @@
 #include "buffer.h"
 
 /* constant definitions */
-#define INIT_CAPACITY 200 /* initial buffer capacity */
-#define INC_FACTOR 15       /* increment factor */
+#define INIT_CAPACITY SHRT_MAX-10 /* initial buffer capacity */
+#define INC_FACTOR 9       /* increment factor */
 
 /*check for ANSI C compliancy */
 #define ANSI_C 0
