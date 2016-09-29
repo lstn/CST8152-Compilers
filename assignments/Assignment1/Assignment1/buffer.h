@@ -55,8 +55,10 @@
 #  endif
 
 /* Uncomment any of the below line to use the function in the compiled code instead of the macro. */
+
 /*#  undef B_FULL*/ 
 /*#  undef B_EMPTY*/
+
 /* If any of the above line is commented the macro will be used in the compiled code instead of the function. */
 
 /* user data type declarations */
