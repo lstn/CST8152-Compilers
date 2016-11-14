@@ -1,16 +1,15 @@
-/* Filename: scanner.c
-/* PURPOSE:
- *    SCANNER.C: Functions implementing a Lexical Analyzer (Scanner)
- *    as required for CST8152, Assignment #2
- *    scanner_init() must be called before using the scanner.
- *    The file is incomplete;
- *    Provided by: Svillen Ranev
- *    Version: 1.16.02
- *    Date: 29 September 2016
- *******************************************************************
- *    REPLACE THIS HEADER WITH YOUR HEADER
- *******************************************************************
- */
+/* File name:	scanner.c
+*  Compiler:	MS Visual Studio 2013
+*  Author:		Lucas Estienne, 040 819 959
+*  Course:		CST 8152 - Compilers, Lab Section 012
+*  Assignment:	02
+*  Date:		14 September 2016
+*  Professor:   Svillen Ranev
+*  Purpose:		Implements the functions and logic required for the Scanner component of the compiler.
+*  Function List: aa_func03(), aa_func04(), aa_func05(), aa_func08(), aa_func12(), aa_func13(),
+*				  char_class(), get_next_state(), iskeyword(), discard_line(),
+*				  scanner_init(), mlwpar_next_token(),
+*/
 
 /* The #define _CRT_SECURE_NO_WARNINGS should be used in MS Visual Studio projects
  * to suppress the warnings about using "unsafe" functions like fopen()
@@ -75,6 +74,16 @@ int scanner_init(Buffer * sc_buf) {
 /*   scerrnum = 0;  *//*no need - global ANSI C */
 }
 
+/* Purpose:			 Matches a lexeme with a pattern and return next token
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: b_getc(), b_getcoffset(), b_size(), b_retract(), b_setmark(), discard_line(),
+*					 b_retract_to_mark(), b_setmark(), b_addc(), b_mark(), b_create(),
+*					 get_next_state(), b_cbhead(), b_free()
+*  Parameters:		 [sc_cur: (Buffer*)]
+*  Return value:	 [ (Token}) ]
+*  Algorithm:
+*/
 Token mlwpar_next_token(Buffer * sc_buf)
 {
 	Token t; /* token to return after recognition */
@@ -386,6 +395,15 @@ int char_class (char c)
 		return (c == '%') ? PVAR_STR : (c == '.') ? PVAL_DOT : PVAL_DEFAULT;
 }
 
+/* Purpose:			 Checks if the lexeme is a keyword or an AVID, and accordingly sets
+*				     token fields.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: iskeyword(), sprintf_s()
+*  Parameters:		 [lexeme: (char[])]
+*  Return value:	 [ (Token) ]
+*  Algorithm:
+*/
 Token aa_func05(char lexeme[]){
 	Token t;
 	int is_kw;
@@ -396,18 +414,25 @@ Token aa_func05(char lexeme[]){
 		t.attribute.kwt_idx = is_kw;
 		return t;
 	}
-	sprintf_s(t.attribute.vid_lex, ERR_LEN + 1, "%.*s", VID_LEN, lexeme);
+	sprintf_s(t.attribute.vid_lex, VID_LEN + 1, "%.*s", VID_LEN, lexeme);
 	t.code = AVID_T;
 	t.attribute.vid_lex[VID_LEN] = '\0';
 
 	return t;
 }
 
-
+/* Purpose:			 Returns the SVID token equivalent for the lexeme passed.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: sprintf_s()
+*  Parameters:		 [lexeme: (char[])]
+*  Return value:	 [ (Token) ]
+*  Algorithm:
+*/
 Token aa_func04(char lexeme[]){
 	Token t;
 
-	sprintf_s(t.attribute.vid_lex, ERR_LEN + 1, "%.*s", VID_LEN - 1, lexeme);
+	sprintf_s(t.attribute.vid_lex, VID_LEN + 1, "%.*s", VID_LEN - 1, lexeme);
 	t.code = SVID_T;
 	t.attribute.vid_lex[VID_LEN - 1] = '%';
 	t.attribute.vid_lex[VID_LEN] = '\0';
@@ -415,69 +440,101 @@ Token aa_func04(char lexeme[]){
 	return t;
 }
 
-
+/* Purpose:			 Returns a floating point token for the lexeme passed. Makes a couple
+*					 of checks to make sure the floating point lexeme passed is valid.
+*					 Can error and return an error token.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: strtof(), strlen(), sprinf()
+*  Parameters:		 [lexeme: (char[])]
+*  Return value:	 [ (Token) ]
+*  Algorithm:
+*/
 Token aa_func13(char lexeme[]){
 	Token t;
 	float fl = strtof(lexeme, NULL);
 	char* check;
 	int declen, i, zero_count = 0;
 	
-	if (lexeme[0] == '0' && lexeme[1] == '.'){
+	if (lexeme[0] == '0' && lexeme[1] == '.'){ /* calculate number of 0s after the decimal*/
 		check = lexeme + 2;
 		declen = strlen(check);
 		for (i = 0; i < declen; i++, zero_count++){
 			if (check[i] != '0') break;
 		}
 	}
-	if (zero_count > 40 || (fl > 0 && (fl > FLT_MAX || fl < FLT_MIN)) || (fl < 0 && (fl < -FLT_MAX || fl > -FLT_MIN))){
+	if (zero_count > 30 || (fl > 0 && (fl > FLT_MAX || fl < FLT_MIN)) || (fl < 0 && (fl < -FLT_MAX || fl > -FLT_MIN))){ /* checks fl against bounds*/
 		t.code = ERR_T;
-		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme);
+		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme); /* error text */
 		t.attribute.err_lex[ERR_LEN] = '\0';
 		return t;
 	}
-	t.code = FPL_T;
+	t.code = FPL_T; /* success */
 	t.attribute.flt_value = fl;
 
 	return t;
 }
 
-
+/* Purpose:			 Returns a decimal integer literal token from the passed lexeme.
+*					 Checks that it does not exceed PLATYPUS bounds. Can error and returns an error token.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: strtol(), sprintf_s()
+*  Parameters:		 [lexeme: (char[])]
+*  Return value:	 [ (Token) ]
+*  Algorithm:
+*/
 Token aa_func08(char lexeme[]){
 	Token t;
-	int dec = (int)strtol(lexeme, NULL, 10);
+	int dec = (int)strtol(lexeme, NULL, 10); /* get decimal base 10 value from base10 lexeme string */
 
-	if (dec > SHRT_MAX || dec < SHRT_MIN){
+	if (dec > SHRT_MAX || dec < SHRT_MIN){ /* is our DIL within bounds? */
 		t.code = ERR_T;
-		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme);
+		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme); /* error text*/
 		t.attribute.err_lex[ERR_LEN] = '\0';
 		return t;
 	}
 
-	t.code = INL_T;
+	t.code = INL_T; /* success */
 	t.attribute.int_value = dec;
 
 	return t;
 }
 
-
+/* Purpose:			 Returns a decimal integer literal token from the passed octal lexeme.
+*					 Checks that it does not exceed PLATYPUS bounds. Can error and returns an error token.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: strtol(), sprintf_s()
+*  Parameters:		 [lexeme: (char[])]
+*  Return value:	 [ (Token) ]
+*  Algorithm:
+*/
 Token aa_func12(char lexeme[]){
 	Token t;
-	int dec = (int) strtol(lexeme, NULL, 8);
+	int dec = (int) strtol(lexeme, NULL, 8); /* get decimal base 10 value from base 8 octal lexeme string */
 
-	if (dec > SHRT_MAX || dec < SHRT_MIN){
+	if (dec > SHRT_MAX || dec < SHRT_MIN){ /* is our DIL within bounds? */
 		t.code = ERR_T;
-		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme);
+		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme); /* error text*/
 		t.attribute.err_lex[ERR_LEN] = '\0';
 		return t;
 	}
 
-	t.code = INL_T;
+	t.code = INL_T; /* success */
 	t.attribute.int_value = dec;
 
 	return t;
 }
 
-
+/* Purpose:			 Returns an error token built from the passed lexeme.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: sprintf_s()
+*  Parameters:		 [lexeme: (char[])]
+*  Return value:	 [ (Token) ]
+*  Algorithm:
+*/
 Token aa_func03(char lexeme[]){
 	Token t;
 
@@ -509,7 +566,7 @@ int iskeyword(char * kw_lexeme){
 /* Purpose:			 Discards the rest of a line in a buffer.
 *  Author:			 Lucas Estienne
 *  History/Versions: [1.0 - 11/14/2016]
-*  Called functions: strcmp()
+*  Called functions: b_getcoffset(), b_size(), b_getc(), b_retract()
 *  Parameters:		 [sc_buf: (Buffer*)]
 *  Return value:	 [ (int) ]
 *  Algorithm:
