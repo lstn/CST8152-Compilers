@@ -80,10 +80,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="buffer.c" />
-    <ClCompile Include="platy_bt.c" />
+    <ClCompile Include="platy_st.c" />
+    <ClCompile Include="scanner.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buffer.h" />
+    <ClInclude Include="table.h" />
+    <ClInclude Include="token.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

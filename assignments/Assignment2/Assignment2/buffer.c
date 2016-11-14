@@ -464,7 +464,7 @@ int b_print(Buffer  * const pBD){
 	if (!b_cbhead(pBD)) return R_FAIL1; /* checks character buffer is initialized */
 
 	if (b_isempty(pBD)){
-		printf("The buffer is empty.\n");
+		printf("The buffer is empty.");
 	} else {
 		temp_getc_offset = pBD->getc_offset;
 		pBD->getc_offset = 0;

@@ -1,14 +1,16 @@
-/* Filename: table.h
- * Transition Table and function declarations necessary for the scanner implementation  
- * as required for CST8152 - Assignment #2.
- * Version: 1.16.02
- * Date: 29 September 2016
- * Provided by: Svillen Ranev
- * The file is incomplete. You are to complete it.
- ***************************************************
- * REPLACE THIS HEADER WITH YOUR HEADER
- ***************************************************
- */
+/* File name:	table.h
+*  Compiler:	MS Visual Studio 2013
+*  Author:		Lucas Estienne, 040 819 959
+*  Course:		CST 8152 - Compilers, Lab Section 012
+*  Assignment:	02
+*  Date:		14 September 2016
+*  Professor:   Svillen Ranev
+*  Purpose:		Transition Table and function declarations necessary for the scanner implementation.
+*  Function List: aa_func03(), aa_func04(), aa_func05(), aa_func08(), aa_func12(), aa_func13()
+*  Constants:	SEOF, ES, IS, PVAR_FLT, PVAR_INT, PVAR_STR, PVAL_ZERO, PVAL_OCTAL,
+*				PVAL_DEC, PVAL_DOT, PVAL_DEFAULT, TABLE_COLUMNS, ASWR, ASNR, NOAS,
+*				KWT_SIZE
+*/
 
 #ifndef  TABLE_H_
 #define  TABLE_H_ 
@@ -22,7 +24,7 @@
 #endif
 
 /*   Source end-of-file (SEOF) sentinel symbol
- *    '\0' or only one of the folowing constants: 255, 0xFF , EOF
+ *    '\0' or only one of the following constants: 255, 0xFF , EOF
  */
 
 /*  Single-lexeme tokens processed separately one by one
@@ -32,7 +34,8 @@
  *  !<comment , ',' , '"' , ';' , '-' , '+' , '*' , '/', # ,
  *  .AND., .OR. , SEOF, 'wrong symbol',
  */
- 
+
+#define SEOF 255
 
 #define ES 3 /* Error state */
 #define IS -1 /* Invalid state */
@@ -58,7 +61,7 @@ int  st_table[][TABLE_COLUMNS] = {
 	/* State 1 */{  1,  1,  4, IS,  1,  1,  1,  5,  5 }, /* AVID/SVID */
 	/* State 2 */{  2,  2,  4, IS , 2,  2,  2,  5,  5 }, /* POSSIBLE INT AVID */
 	/* State 3 */{ IS, IS, IS, IS, IS, IS, IS, IS, IS }, /* ES */
-	/* State 4 */{ ES, ES, ES, ES, ES, ES, ES, ES,  5 }, 
+	/* State 4 */{ IS, IS, IS, IS, IS, IS, IS, IS, IS },
 	/* State 5 */{ IS, IS, IS, IS, IS, IS, IS, IS, IS }, 
 	/* State 6 */{ ES, ES,  8, IS,  6,  6,  6, 11,  8 }, /* [1-9] first symbol */
 	/* State 7 */{ ES, ES,  8, IS, ES,  9,  3, 11,  8 }, /* '0' first symbol */
@@ -80,7 +83,7 @@ int as_table[ ] = {
 	/* State 1 */ NOAS, /* */
 	/* State 2 */ NOAS, /* */
 	/* State 3 */ ASNR, /* */
-	/* State 4 */ NOAS, /* */
+	/* State 4 */ ASNR, /* */
 	/* State 5 */ ASWR, /* */
 	/* State 6 */ NOAS, /* */
 	/* State 7 */ NOAS, /* */
@@ -94,23 +97,12 @@ int as_table[ ] = {
 
 /* Accepting action function declarations */
 
-/*
-FOR EACH OF YOUR ACCEPTING STATES YOU MUST PROVIDE
-ONE FUNCTION PROTOTYPE. THEY ALL RETURN Token AND TAKE
-ONE ARGUMENT: A string REPRESENTING A TOKEN LEXEME. 
-
-Token aa_funcXX(char *lexeme);
-
-Replace XX with the number of the accepting state : 02, 03 and so on.*/
-
-/* defining a new type: pointer to function (of one char * argument) 
-   returning Token
-*/  
 
 typedef Token (*PTR_AAF)(char *lexeme);
 
 Token aa_func03(char *lexeme); /* ES */
-Token aa_func05(char *lexeme); /* AVID/SVID */
+Token aa_func04(char *lexeme); /* SVID */
+Token aa_func05(char *lexeme); /* KW/AVID */
 Token aa_func08(char *lexeme); /* DIL */
 Token aa_func12(char *lexeme); /* OIL */
 Token aa_func13(char *lexeme); /* FPL */
@@ -125,7 +117,7 @@ PTR_AAF aa_table[ ] ={
 	/* State 1 */  NULL,
 	/* State 2 */  NULL,
 	/* State 3 */  aa_func03,
-	/* State 4 */  NULL,
+	/* State 4 */  aa_func04,
 	/* State 5 */  aa_func05,
 	/* State 6 */  NULL,
 	/* State 7 */  NULL,

@@ -37,6 +37,7 @@
 #define DEBUG  /* for conditional processing */
 #undef  DEBUG
 
+
 /* Global objects - variables */
 /* This buffer is used as a repository for string literals.
    It is defined in platy_st.c */
@@ -47,14 +48,22 @@ extern int scerrnum;     /* defined in platy_st.c - run-time error number */
 /* Local(file) global objects - variables */
 static Buffer *lex_buf;/*pointer to temporary lexeme buffer*/
 
-/* No other global variable declarations/definitiond are allowed */
+/* No other global variable declarations/definition are allowed */
 
 /* scanner.c static(local) function  prototypes */ 
 static int char_class(char c); /* character class function */
 static int get_next_state(int, char, int *); /* state machine function */
-static int iskeyword(char * kw_lexeme); /*keywords lookup functuion */
-static long atool(char * lexeme); /* converts octal string to decimal value */
+static int iskeyword(char * kw_lexeme); /*keywords lookup function */
+static int discard_line(Buffer * sc_buf); /* discard end of line after comment*/
 
+/* Purpose:			 Performs the init for the scanner buffer by resetting it and
+*					 the string literal buffer. Sets line to 1
+*  Author:			 Svillen Ranev
+*  Called functions: b_setmark(), b_retract_to_mark(), b_reset(), b_isempty()
+*  Parameters:		 [sc_buf: (Buffer *)]
+*  Return value:	 [ (int, values: {EXIT_SUCCESS}) ]
+*  Algorithm:
+*/
 int scanner_init(Buffer * sc_buf) {
   	if(b_isempty(sc_buf)) return EXIT_FAILURE;/*1*/
 	/* in case the buffer has been read previously  */
@@ -73,42 +82,36 @@ Token mlwpar_next_token(Buffer * sc_buf)
 	int state = 0; /* initial state of the FSM */
 	short lexstart;  /*start offset of a lexeme in the input buffer */
 	short lexend;    /*end   offset of a lexeme in the input buffer */
-	int accept = NOAS; /* type of state - initially not accepting */                                     
-	/* 
-	lexstart is the offset from the beginning of the char buffer of the
-	input buffer (sc_buf) to the first character of the current lexeme,
-	which is being processed by the scanner.
-	lexend is the offset from the beginning of the char buffer of the
-	input buffer (sc_buf) to the last character of the current lexeme,
-	which is being processed by the scanner.
-
-	*/ 
+	int accept = NOAS; /* type of state - initially not accepting */
         
         
 		/*DECLARE YOUR VARIABLES HERE IF NEEDED */
-	int continue_loop = 1;
-	unsigned int j;
-	unsigned char nextc;
-	char and_op_check[] = "ND.";
-	char or_op_check[] = "R.";
+	int continue_loop = 1; /* whether to keep running the while loop */
+	unsigned int j; /* loop var */
+	int i; /* loop var */
+	unsigned char nextc; /* input symbol */
+
+	char and_op_check[] = "ND."; /* string to check for when looking for the .AND. operator */
+	char or_op_check[] = "R."; /* string to check for when looking for the .OR. operator */
         
                 
-	while (continue_loop){ /* endless loop broken by token returns it will generate a warning */
+	while (continue_loop){ /* loops until token returns */
         c = b_getc(sc_buf);
 		switch (c){
-			case ' ':
+			case ' ': /* whitespace */
 			case '\t':
 			case '\v':
 			case '\f':
-			case '\r':
+			case '\r': 
 				break;
-			case '\n':
-				++line;
+			case '\n': /* newlines */
+				++line; /* only increment count, don't break loop */
 				break;
-			case '\0':
+			case '\0': /* null term / SEOF */
+			case SEOF:
 				t.code = SEOF_T;
 				continue_loop = 0; break;
-			case ';':
+			case ';': /* EOS */
 				t.code = EOS_T;
 				continue_loop = 0; break;
 			case '=': /* also == */
@@ -127,79 +130,81 @@ Token mlwpar_next_token(Buffer * sc_buf)
 			}
 			case '!': /*!<*/
 			{
-				lexstart = b_getcoffset(sc_buf);
+				lexstart = b_getcoffset(sc_buf); /* set lexstart and mark to current getcoffset */
 				b_setmark(sc_buf, lexstart);
 				if (lexstart < b_size(sc_buf)){
 					nextc = b_getc(sc_buf);
-					if (nextc == '<'){
+					if (nextc == '<'){ /* comment syntax found */
 						discard_line(sc_buf);
-						continue_loop = 0; break;
+						break;
 					}
 					b_retract(sc_buf); /* go back 1, next char was not '<' */
 				}
 
-				/* syntax error */
+				/* count not find comment, set token to error */
 				t.code = ERR_T;
 				b_retract_to_mark(sc_buf);
 				t.attribute.err_lex[0] = c;
 				t.attribute.err_lex[1] = b_getc(sc_buf);
 				t.attribute.err_lex[2] = '\0';
+				discard_line(sc_buf); /* rest of the line is garbage, get rid of it */
 				continue_loop = 0; break;
 			}
 			case '<': /* also <> */
 			{
 				if (b_getcoffset(sc_buf) < b_size(sc_buf)){
 					nextc = b_getc(sc_buf);
-					if (nextc == '>'){
+					if (nextc == '>'){ /* found not equal <> operator */
 						t.code = REL_OP_T;
-						t.attribute.rel_op = NE;
+						t.attribute.rel_op = NE; 
 						continue_loop = 0; break;
 					}
 					b_retract(sc_buf); /* go back 1, next char was not '>' */
 				}
+				/* found '<' operator */
 				t.code = REL_OP_T;
 				t.attribute.rel_op = LT;
 				continue_loop = 0; break;
 			}
-			case '>':
+			case '>': /* found '>' operator */
 				t.code = REL_OP_T;
 				t.attribute.rel_op = GT;
 				continue_loop = 0; break;
-			case '+':
+			case '+': /* found '+' operator */
 				t.code = ART_OP_T;
 				t.attribute.arr_op = PLUS;
 				continue_loop = 0; break;
-			case '-':
+			case '-': /* found '-' operator */
 				t.code = ART_OP_T;
 				t.attribute.arr_op = MINUS;
 				continue_loop = 0; break;
-			case '*':
+			case '*': /* found '*' operator */
 				t.code = ART_OP_T;
 				t.attribute.arr_op = MULT;
 				continue_loop = 0; break;
-			case '/':
+			case '/': /* found '/' operator */
 				t.code = ART_OP_T;
 				t.attribute.arr_op = DIV;
 				continue_loop = 0; break;
 			case '.': /* .AND. .OR. */
 			{
-				lexstart = b_getcoffset(sc_buf);
+				lexstart = b_getcoffset(sc_buf); /* set lexstart and mark to current getcoffset */
 				b_setmark(sc_buf, lexstart);
 				if (b_getcoffset(sc_buf) < b_size(sc_buf)){
 					nextc = b_getc(sc_buf);
-					if (nextc == 'O'){
+					if (nextc == 'O'){ /* try to find the .OR. operator*/
 						for (j = 1; j < sizeof(or_op_check); j++)
 							if (b_getc(sc_buf) != or_op_check[j - 1]) break;
-						if (j == 3){
+						if (j == 3){ /* found the OR operator */
 							t.code = LOG_OP_T;
 							t.attribute.log_op = OR;
 							continue_loop = 0; break;
 						}
 					}
-					if (nextc == 'A'){
+					if (nextc == 'A'){ /* try to find the .AND. operator*/
 						for (j = 1; j < sizeof(and_op_check); j++)
 							if (b_getc(sc_buf) != and_op_check[j - 1]) break;
-						if (j == 4){
+						if (j == 4){ /* found the AND operator */
 							t.code = LOG_OP_T;
 							t.attribute.log_op = AND;
 							continue_loop = 0; break;
@@ -207,115 +212,139 @@ Token mlwpar_next_token(Buffer * sc_buf)
 					}
 				}
 
-				/* syntax error */
+				/* could not find either operators, error */
 				t.code = ERR_T;
-				b_retract_to_mark(sc_buf);
+				b_retract_to_mark(sc_buf); /* retract to lexstart */
 				t.attribute.err_lex[0] = c;
-				t.attribute.err_lex[1] = b_getc(sc_buf);
-				t.attribute.err_lex[2] = '\0';
+				t.attribute.err_lex[1] = '\0';
 				continue_loop = 0; break;
 			}
-			case '"':
+			case '"': /* strings */
 			{
-				lexstart = b_getcoffset(sc_buf)+1;
+				lexstart = b_getcoffset(sc_buf); /* set lexstart and mark to current getcoffset */
 				b_setmark(sc_buf, lexstart);
-				if (b_setmark(str_LTBL, b_size(str_LTBL)) == -1){
+				if (b_setmark(str_LTBL, b_size(str_LTBL)) == R_FAIL1){ /* attempt to set the mark for str_LTBL to its b_size() */
 					scerrnum = 1;
-					t = aa_table[ES]("RUN TIME ERROR: ");
+					t = aa_table[ES]("RUN TIME ERROR: "); /* if failed to set the mark */
 					continue_loop = 0; break;
 				}
 
 				while (b_getcoffset(sc_buf) < b_size(sc_buf)){
 					nextc = b_getc(sc_buf);
-					if (nextc == '\0'){
+					if (nextc == '\0'){ /* null term */
 						t.code = ERR_T;
-						b_retract(sc_buf);
-						/* add error handling */
+						b_retract(sc_buf); /* go back one */
+						lexend = b_getcoffset(sc_buf); /* set lexend to current getcoffset */
+
+						/* begin generating error message */
+						b_setmark(sc_buf, lexstart - 1); /* set mark to lexstart-1 */
+						b_retract_to_mark(sc_buf); /* retract to lexstart-1 */
+
+						for (i = 0; i < (ERR_LEN - 3); i++){
+							nextc = b_getc(sc_buf);
+							if (nextc == '\0'){
+								break;
+							}
+							t.attribute.err_lex[i] = nextc;
+						}
+						t.attribute.err_lex[i] = '\0';
+						strcat(t.attribute.err_lex, "...");
+						/* end error message */
+						b_setmark(sc_buf, lexend); 
+						b_retract_to_mark(sc_buf); /* reset buffer back to where it was */
 						continue_loop = 0; break;
 					}
-					if (nextc == '"'){
+					if (nextc == '"'){ /* found end of string */
 						t.code = STR_T;
 						break;
 					}
-					if (nextc == '\n') line++;
+					if (nextc == '\n') line++; /* new line */
 				}
 				if (continue_loop == 0) break;
-				lexend = b_getcoffset(sc_buf);
+				lexend = b_getcoffset(sc_buf)-1; /* set lexend to current getcoffset-1 */
 
-				b_retract_to_mark(lexstart);
-				while (b_getcoffset(sc_buf) < lexend) b_addc(str_LTBL, b_getc(sc_buf));
+				b_retract_to_mark(sc_buf); /* retract to beginning of string */
+				while (b_getcoffset(sc_buf) < lexend) b_addc(str_LTBL, b_getc(sc_buf)); /* addc to str_LTBL until we reach lexend */
 
-				b_getc(sc_buf);
+				b_getc(sc_buf); /* get the extra '"' character out*/
 
-				if (!b_addc(str_LTBL, '\0')){
+				if (!b_addc(str_LTBL, '\0')){ /* attempt to add null term to str_LTBL */
 					scerrnum = 2;
-					t = aa_table[ES]("RUN TIME ERROR: ");
+					t = aa_table[ES]("RUN TIME ERROR: "); /* failed */
 					continue_loop = 0; break;
 				}
 
 				t.attribute.str_offset = b_mark(str_LTBL);
 				continue_loop = 0; break;
 			}
-			case '#':
+			case '#': /* string concat */
 				t.code = SCC_OP_T;
 				continue_loop = 0; break;
-			case ',':
+			case ',': /* comma */
 				t.code = COM_T;
 				continue_loop = 0; break;
-			case '{':
+			case '{': /* left brace */
 				t.code = LBR_T;
 				continue_loop = 0; break;
-			case '}':
+			case '}': /* right brace */
 				t.code = RBR_T;
 				continue_loop = 0; break;
-			case '(':
+			case '(': /* left paren */
 				t.code = LPR_T;
 				continue_loop = 0; break;
-			case ')':
+			case ')': /* right brace */
 				t.code = RPR_T;
 				continue_loop = 0; break;
-			default:
-				if (!isalnum(c)){
+			default: /* all other chars */
+				if (!isalnum(c)){ /* if not alphanumeric, error */
 					t.code = ERR_T;
 					t.attribute.err_lex[0] = c;
 					t.attribute.err_lex[1] = '\0';
-					break;
+					continue_loop = 0; break;
 				}
-				lexstart = b_getcoffset(sc_buf);
+				lexstart = b_getcoffset(sc_buf) - 1; /* set lexstart and mark to getcoffset-1*/
 				b_setmark(sc_buf, lexstart);
 
 				do{ /* FSM 0 */
 					state = get_next_state(state, c, &accept); /* FSM 1 */
 					if (accept != NOAS) break; /* FSM 3 */
 					c = b_getc(sc_buf); /* FSM 2 */
-				} while (accept = NOAS); /* FSM 3 */
-				lexend = b_getcoffset(sc_buf);
+				} while (accept == NOAS); /* FSM 3 */
+				lexend = b_getcoffset(sc_buf); /* set lexend to getcoffset after exiting FSM */
 
-				lex_buf = b_create(lexend-lexstart+2, 0, 'f');
-				if (!lex_buf){
+				lex_buf = b_create(lexend - lexstart + 2, 0, 'f'); /* create temporary buffer */
+				if (!lex_buf){ /* did we fail to create the buffer? */
 					scerrnum = 3;
 					t = aa_table[ES]("RUN TIME ERROR: ");
 					continue_loop = 0; break;
 				}
 
-				if (accept == ASWR) --lexend;
+				if (accept == ASWR) --lexend; /* accept state with retracting, reduce lexend by 1 char */
 
-				b_retract_to_mark(sc_buf);
-				while (b_getcoffset(sc_buf) < lexend) b_addc(lex_buf, b_getc(sc_buf));
-				if (!b_addc(lex_buf, '\0')){
+				b_retract_to_mark(sc_buf); /* retract to mark */
+				while (b_getcoffset(sc_buf) < lexend) b_addc(lex_buf, b_getc(sc_buf)); /* keep adding to temp buffer until we reach lexend */
+				if (!b_addc(lex_buf, '\0')){ /* try to null term temporary buffer */
 					scerrnum = 4;
-					t = aa_table[ES]("RUN TIME ERROR: ");
+					t = aa_table[ES]("RUN TIME ERROR: "); /* failed */
 					continue_loop = 0; break;
 				}
 
-				t = aa_table[state](b_cbhead(lex_buf));
+				t = aa_table[state](b_cbhead(lex_buf)); /* call accepted state function and pass temp buffer cbhead*/
 
-				b_free(lex_buf);
+				b_free(lex_buf); /* free up temp buffer memory */
 				continue_loop = 0; break;
 		}
-   }
+   } /* end loop */
+   return t; /* return token*/
 }
 
+/* Purpose:			 Checks transition table and returns the next state for the current state/char.
+*  Author:			 Svillen Ranev
+*  Called functions: char_class(), printf(), exit(), assert()
+*  Parameters:		 [state: (int), c: (char), accept: (int*)]
+*  Return value:	 [ (int) ]
+*  Algorithm:
+*/
 int get_next_state(int state, char c, int *accept)
 {
 	int col;
@@ -337,19 +366,25 @@ int get_next_state(int state, char c, int *accept)
 	return next;
 }
 
+/* Purpose:			 Gets the transition table column for a symbol
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: isalpha(), isdigit()
+*  Parameters:		 [c: (char)]
+*  Return value:	 [ (int, values: {PVAR_INT, PVAR_FLT, PVAL_ZERO, PVAL_OCTAL, PVAL_DEC
+										PVAR_STR, PVAL_DOT, PVAL_DEFAULT}) ]
+*  Algorithm:
+*/
 int char_class (char c)
 {
 		if (isalpha(c))
 			return (c == 'i' || c == 'o' || c == 'w' || c == 'd') ? PVAR_INT : PVAR_FLT;
 		
 		if (isdigit(c))
-			return (c == 0) ? PVAL_ZERO : (c < '8') ? PVAL_OCTAL : PVAL_DEC;
+			return (c == '0') ? PVAL_ZERO : (c < '8') ? PVAL_OCTAL : PVAL_DEC;
 		
 		return (c == '%') ? PVAR_STR : (c == '.') ? PVAL_DOT : PVAL_DEFAULT;
 }
-
-
-
 
 Token aa_func05(char lexeme[]){
 	Token t;
@@ -361,120 +396,124 @@ Token aa_func05(char lexeme[]){
 		t.attribute.kwt_idx = is_kw;
 		return t;
 	}
+	sprintf_s(t.attribute.vid_lex, ERR_LEN + 1, "%.*s", VID_LEN, lexeme);
+	t.code = AVID_T;
+	t.attribute.vid_lex[VID_LEN] = '\0';
 
-
-/*
-WHEN CALLED THE FUNCTION MUST
-1. CHECK IF THE LEXEME IS A KEYWORD.
-   IF YES, IT MUST RETURN A TOKEN WITH THE CORRESPONDING ATTRIBUTE
-   FOR THE KEYWORD. THE ATTRIBUTE CODE FOR THE KEYWORD
-   IS ITS INDEX IN THE KEYWORD LOOKUP TABLE (kw_table in table.h).
-   IF THE LEXEME IS NOT A KEYWORD, GO TO STEP 2.
-
-2. SET a AVID TOKEN.
-   IF THE lexeme IS LONGER than VID_LEN (see token.h) CHARACTERS,
-   ONLY FIRST VID_LEN CHARACTERS ARE STORED 
-   INTO THE VARIABLE ATTRIBUTE ARRAY vid_lex[](see token.h) .
-   ADD \0 AT THE END TO MAKE A C-type STRING.*/
 	return t;
 }
 
-ACCEPTING FUNCTION FOR THE string variable identifier (VID - SVID)
-REPLACE XX WITH THE CORRESPONDING ACCEPTING STATE NUMBER
 
-Token aa_funcXX(char lexeme[]){
+Token aa_func04(char lexeme[]){
+	Token t;
 
-WHEN CALLED THE FUNCTION MUST
-1. SET a SVID TOKEN.
-   IF THE lexeme IS LONGER than VID_LEN characters,
-   ONLY FIRST VID_LEN-1 CHARACTERS ARE STORED
-   INTO THE VARIABLE ATTRIBUTE ARRAY vid_lex[],
-   AND THEN THE % CHARACTER IS APPENDED TO THE NAME.
-   ADD \0 AT THE END TO MAKE A C-type STRING.
-  
-  return t;
-}
+	sprintf_s(t.attribute.vid_lex, ERR_LEN + 1, "%.*s", VID_LEN - 1, lexeme);
+	t.code = SVID_T;
+	t.attribute.vid_lex[VID_LEN - 1] = '%';
+	t.attribute.vid_lex[VID_LEN] = '\0';
 
-ACCEPTING FUNCTION FOR THE floating-point literal (FPL)
-
-Token aa_funcXX(char lexeme[]){
-
-THE FUNCTION MUST CONVERT THE LEXEME TO A FLOATING POINT VALUE,
-WHICH IS THE ATTRIBUTE FOR THE TOKEN.
-THE VALUE MUST BE IN THE SAME RANGE AS the value of 4-byte float in C.
-IN CASE OF ERROR (OUT OF RANGE) THE FUNCTION MUST RETURN ERROR TOKEN
-THE ERROR TOKEN ATTRIBUTE IS  lexeme. IF THE ERROR lexeme IS LONGER
-than ERR_LEN caharacters, only the first ERR_LEN character are
-stored in err_lex.
-  return t;
-}
-
-ACCEPTING FUNCTION FOR THE integer literal(IL) - decimal constant (DIL) AND ZERO (0)
-
-Token aa_funcXX(char lexeme[]){
-
-THE FUNCTION MUST CONVERT THE LEXEME REPRESENTING A DECIMAL CONSTANT AND 0
-TO A DECIMAL INTEGER VALUE, WHICH IS THE ATTRIBUTE FOR THE TOKEN.
-THE VALUE MUST BE IN THE SAME RANGE AS the value of 2-byte integer in C.
-IN CASE OF ERROR (OUT OF RANGE) THE FUNCTION MUST RETURN ERROR TOKEN
-THE ERROR TOKEN ATTRIBUTE IS  lexeme. IF THE ERROR lexeme IS LONGER
-than ERR_LEN caharacters, only the first ERR_LEN character are
-stored in err_lex.
-  return t;
-}
-
-ACCEPTING FUNCTION FOR THE integer literal(IL) - octal constant (OIL)
-
-Token aa_funcXX(char lexeme[]){
-
-THE FUNCTION MUST CONVERT THE LEXEME REPRESENTING AN OCTAL CONSTANT
-TO A DECIMAL INTEGER VALUE WHICH IS THE ATTRIBUTE FOR THE TOKEN.
-THE VALUE MUST BE IN THE SAME RANGE AS the value of 2-byte integer in C.
-THIS FUNCTION IS SIMILAR TO THE FUNCTION ABOVE AND THEY CAN BE
-COMBINED INTO ONE FUNCTION
-THE MAIN DIFFERENCE IE THAT THIS FUNCTION CALLS
-THE FUNCTION atool(char * lexeme) WHICH CONVERTS AN ASCII STRING
-REPRESENTING AN OCTAL NUMBER TO INTEGER VALUE
-IN CASE OF ERROR (OUT OF RANGE) THE FUNCTION MUST RETURN ERROR TOKEN
-THE ERROR TOKEN ATTRIBUTE IS  lexeme. IF THE ERROR lexeme IS LONGER
-than ERR_LEN caharacters, only the first ERR_LEN character are
-stored in err_lex.
-
-  return t;
-}
-
-ACCEPTING FUNCTION FOR THE ERROR TOKEN 
-
-Token aa_funcXX(char lexeme[]){
-
-THE FUNCTION SETS THE ERROR TOKEN. lexeme[] CONTAINS THE ERROR
-THE ATTRIBUTE OF THE ERROR TOKEN IS THE lexeme ITSELF
-AND IT MUST BE STORED in err_lex.  IF THE ERROR lexeme IS LONGER
-than ERR_LEN caharacters, only the first ERR_LEN character are
-stored in err_lex.
-
-  return t;
+	return t;
 }
 
 
-CONVERSION FUNCTION
+Token aa_func13(char lexeme[]){
+	Token t;
+	float fl = strtof(lexeme, NULL);
+	char* check;
+	int declen, i, zero_count = 0;
+	
+	if (lexeme[0] == '0' && lexeme[1] == '.'){
+		check = lexeme + 2;
+		declen = strlen(check);
+		for (i = 0; i < declen; i++, zero_count++){
+			if (check[i] != '0') break;
+		}
+	}
+	if (zero_count > 40 || (fl > 0 && (fl > FLT_MAX || fl < FLT_MIN)) || (fl < 0 && (fl < -FLT_MAX || fl > -FLT_MIN))){
+		t.code = ERR_T;
+		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme);
+		t.attribute.err_lex[ERR_LEN] = '\0';
+		return t;
+	}
+	t.code = FPL_T;
+	t.attribute.flt_value = fl;
 
-long atool(char * lexeme){
-
-THE FUNCTION CONVERTS AN ASCII STRING
-REPRESENTING AN OCTAL INTEGER CONSTANT TO INTEGER VALUE
+	return t;
 }
 
+
+Token aa_func08(char lexeme[]){
+	Token t;
+	int dec = (int)strtol(lexeme, NULL, 10);
+
+	if (dec > SHRT_MAX || dec < SHRT_MIN){
+		t.code = ERR_T;
+		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme);
+		t.attribute.err_lex[ERR_LEN] = '\0';
+		return t;
+	}
+
+	t.code = INL_T;
+	t.attribute.int_value = dec;
+
+	return t;
+}
+
+
+Token aa_func12(char lexeme[]){
+	Token t;
+	int dec = (int) strtol(lexeme, NULL, 8);
+
+	if (dec > SHRT_MAX || dec < SHRT_MIN){
+		t.code = ERR_T;
+		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme);
+		t.attribute.err_lex[ERR_LEN] = '\0';
+		return t;
+	}
+
+	t.code = INL_T;
+	t.attribute.int_value = dec;
+
+	return t;
+}
+
+
+Token aa_func03(char lexeme[]){
+	Token t;
+
+	t.code = ERR_T;
+	sprintf_s(t.attribute.err_lex, ERR_LEN+1, "%.*s", ERR_LEN, lexeme);
+	t.attribute.err_lex[ERR_LEN] = '\0';
+
+	return t;
+}
+
+/* Purpose:			 Checks if a lexeme is a PLATYPUS keyword
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: strcmp()
+*  Parameters:		 [kw_lexeme: (char*)]
+*  Return value:	 [ (int, values: {-1...n}) ]
+*  Algorithm:
+*/
 int iskeyword(char * kw_lexeme){
 	int i;
 	for (i = 0; i < KWT_SIZE; i++){
-		if (strcmp(lexeme, kw_table[i]) == 0) {
-			return i;
+		if (strcmp(kw_lexeme, kw_table[i]) == 0) {
+			return i; /* return current index */
 		}
 	}
-	return -1;
+	return -1; /* not found */
 }
 
+/* Purpose:			 Discards the rest of a line in a buffer.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 11/14/2016]
+*  Called functions: strcmp()
+*  Parameters:		 [sc_buf: (Buffer*)]
+*  Return value:	 [ (int) ]
+*  Algorithm:
+*/
 int discard_line(Buffer * sc_buf){
 	unsigned char c;
 	while (b_getcoffset(sc_buf) < b_size(sc_buf)){
@@ -484,7 +523,7 @@ int discard_line(Buffer * sc_buf){
 			break;
 		}
 		if (c == '\0'){
-			b_retract(sc_buf);
+			b_retract(sc_buf); /* retract 1 when EOF */
 			break;
 		}
 	}
