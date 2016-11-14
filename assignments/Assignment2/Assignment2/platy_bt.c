@@ -20,7 +20,7 @@
 
 /* constant definitions */
 #define INIT_CAPACITY 200 /* initial buffer capacity */
-#define INC_FACTOR 0       /* increment factor */
+#define INC_FACTOR 15       /* increment factor */
 
 /*check for ANSI C compliancy */
 #define ANSI_C 0
