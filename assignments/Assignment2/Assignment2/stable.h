@@ -6,8 +6,11 @@
 *  Date:		1 December 2016
 *  Professor:   Svillen Ranev
 *  Purpose:		Symbol Table DB implementation declarations and ST manager prototypes
-*  Function List: 
-*  Constants:	
+*  Function List: st_create(), st_install(), st_lookup(), st_update_type(), st_update_value(),
+*			     st_get_type(), st_destroy(), st_print(), st_store(), st_sort()
+*  Constants: RFAIL_INVALID_ST, RFAIL_ST_FULL, ST_BUF_INIT_CAP, RFAIL_BUF_MEMCHANGED, ST_BUF_INIT_MODE,
+*			  ST_BUF_INIT_INC, ST_INIT_OFFSET, ST_FILENAME, SYMBOL_NOT_FOUND, SF_INIT, SF_DEFAULT,
+*             SF_INT_TYPE, SF_STRING_TYPE, SF_FLOAT_TYPE, SF_UPDATE, SF_TYPEMASK
 */
 
 #ifndef  STABLE_H_
@@ -27,20 +30,22 @@
 #define RFAIL_BUF_MEMCHANGED -2
 
 #define ST_BUF_INIT_MODE 'a'
-#define ST_BUF_INIT_CAP 10
-#define ST_BUF_INIT_INC 1
+#define ST_BUF_INIT_CAP 100
+#define ST_BUF_INIT_INC 10
 
 #define ST_INIT_OFFSET 0
+#define ST_FILENAME "$stable.ste"
 
 #define SYMBOL_NOT_FOUND -1
 
 /* flags */
 #define SF_INIT 0x0000
 #define SF_DEFAULT 0xFFF8
-#define SF_INT_TYPE 0x0002
+#define SF_INT_TYPE 0x0004
 #define SF_STRING_TYPE 0x0006
-#define SF_FLOAT_TYPE 0x0004
+#define SF_FLOAT_TYPE 0x0002
 #define SF_UPDATE 0x0001
+#define SF_TYPEMASK 0xFFF9
 
 /* stdb implementation */
 typedef union InitialValue {

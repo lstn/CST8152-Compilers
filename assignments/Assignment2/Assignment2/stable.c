@@ -6,7 +6,8 @@
 *  Date:		1 December 2016
 *  Professor:   Svillen Ranev
 *  Purpose:		Implements the symbol table manager
-*  Function List: 
+*  Function List: st_create(), st_install(), st_lookup(), st_update_type(), st_update_value(),
+*			     st_get_type(), st_destroy(), st_print(), st_store(), st_sort()
 */
 
 /* The #define _CRT_SECURE_NO_WARNINGS should be used in MS Visual Studio projects
@@ -43,6 +44,14 @@ extern STD sym_table;
 
 /* symbol table manager functions implementations*/
 
+/* Purpose:			 Creates a new empty symbol table.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: b_create(), free(), malloc(), 
+*  Parameters:		 [st_size: int]
+*  Return value:	 STD
+*  Algorithm:
+*/
 STD st_create(int st_size){
 	STD new_st;
 
@@ -65,8 +74,17 @@ STD st_create(int st_size){
 	new_st.st_size = st_size; /* nothing failed, can set st_size to indicate st is valid */
 	return new_st;
 }
+
+/* Purpose:			 Tries to add a new VID record to the symbol table, returns position of existing symbol if it is already in it.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: strlen(), st_lookup(), b_cbhead(), b_size(), b_addc(), b_rflag(),, b_mark(), b_retract_to_mark(),, st_incoffset()
+*  Parameters:		 [sym_table: STD, lexeme: char*, type: char, line: int]
+*  Return value:	 int
+*  Algorithm:
+*/
 int st_install(STD sym_table, char *lexeme, char type, int line){
-	int temp_offset, i, lexlen;
+	int temp_offset, i, lexlen, rcheck = 0, rlen, roffset;
 
 	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
 		return RFAIL_INVALID_ST;
@@ -74,26 +92,35 @@ int st_install(STD sym_table, char *lexeme, char type, int line){
 	lexlen = strlen(lexeme);
 
 	temp_offset = st_lookup(sym_table, lexeme);
-	if (temp_offset != SYMBOL_NOT_FOUND) return temp_offset; /* symbol already exists*/
+	if (temp_offset > -1) {
+		return temp_offset; /* symbol already exists*/
+	}
 	if (sym_table.st_offset >= sym_table.st_size) return RFAIL_ST_FULL; /* table is full */
 
 	sym_table.pstvr[sym_table.st_offset].plex = b_cbhead(sym_table.plsBD) + b_size(sym_table.plsBD);
 
 	b_setmark(sym_table.plsBD, b_size(sym_table.plsBD)); /* recovery mark if we fail */
-
-	for (i = 0; i < lexlen - 1; i++){
+	for (i = 0; i < lexlen+1; i++){
 		b_addc(sym_table.plsBD, lexeme[i]);
-		/*if (b_rflag(sym_table.plsBD)){}*/ /* buffer has changed memory location, so fail*/
+		if (b_rflag(sym_table.plsBD)) rcheck = b_rflag(sym_table.plsBD);
 	}
 
-	if ((b_mark(sym_table.plsBD) + lexlen) != (b_size(sym_table.plsBD) - 1)){ /* failed to add */
+	/* while adding to buffer, there's a chance memory moved, so we have to check*/
+	if (rcheck){
+		for (roffset = 0, i = 0; i < sym_table.st_offset; i++, roffset += ++rlen){
+			rlen = strlen(b_cbhead(sym_table.plsBD) + roffset);
+			sym_table.pstvr[sym_table.st_offset].plex = b_cbhead(sym_table.plsBD) + roffset;
+		}
+	}
+	if ((b_mark(sym_table.plsBD) + lexlen + 1) != (b_size(sym_table.plsBD))){ /* failed to add */
 		sym_table.pstvr[sym_table.st_offset].plex = NULL; /*dangling pointer*/
 		b_retract_to_mark(sym_table.plsBD); 
-		return R_FAIL2;
+		return R_FAIL1;
 	}
 
 	sym_table.pstvr[sym_table.st_offset].o_line = line;
-	sym_table.pstvr[sym_table.st_offset].status_field = sym_table.pstvr[sym_table.st_offset].status_field & SF_INIT | SF_DEFAULT;
+	sym_table.pstvr[sym_table.st_offset].status_field &= SF_INIT;
+	sym_table.pstvr[sym_table.st_offset].status_field |= SF_DEFAULT;
 
 	switch (type){
 		case 'I':
@@ -105,7 +132,8 @@ int st_install(STD sym_table, char *lexeme, char type, int line){
 			sym_table.pstvr[sym_table.st_offset].i_value.fpl_val = 0.0;
 			break;
 		case 'S':
-			sym_table.pstvr[sym_table.st_offset].status_field |= SF_STRING_TYPE | SF_UPDATE;
+			sym_table.pstvr[sym_table.st_offset].status_field |= SF_STRING_TYPE;
+			sym_table.pstvr[sym_table.st_offset].status_field |= SF_UPDATE;
 			sym_table.pstvr[sym_table.st_offset].i_value.str_offset = -1;
 			break;
 	}
@@ -115,6 +143,14 @@ int st_install(STD sym_table, char *lexeme, char type, int line){
 	return sym_table.st_offset;
 }
 
+/* Purpose:			 Checks if a symbol is already present in the table.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: strcmp()
+*  Parameters:		 [sym_table: STD, lexeme: char*]
+*  Return value:	 int: -1 if not found, index otherwise
+*  Algorithm:
+*/
 int st_lookup(STD sym_table, char *lexeme){
 	int current_offset;
 
@@ -124,12 +160,20 @@ int st_lookup(STD sym_table, char *lexeme){
 	/* looking up backwards, so start at last entry */
 	current_offset = sym_table.st_offset - 1;
 	while (current_offset > -1){
-		if (!strcmp(sym_table.pstvr[current_offset++].plex, lexeme)) /* todo make sure this works*/
-			return current_offset;
+		if (!strcmp(sym_table.pstvr[current_offset--].plex, lexeme)) /* todo make sure this works*/
+			return current_offset+1;
 	}
 	return SYMBOL_NOT_FOUND; /* not found */
 }
 
+/* Purpose:			 Updates the type of a symbol.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: 
+*  Parameters:		 [sym_table: STD, vid_offset: int, v_type: char]
+*  Return value:	 int: vid_offset or failure state
+*  Algorithm:
+*/
 int st_update_type(STD sym_table, int vid_offset, char v_type){
 	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
 		return RFAIL_INVALID_ST;
@@ -153,6 +197,16 @@ int st_update_type(STD sym_table, int vid_offset, char v_type){
 	sym_table.pstvr[vid_offset].status_field |= SF_UPDATE;
 	return vid_offset;
 }
+
+
+/* Purpose:			 Updates the value of a symbol.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions:
+*  Parameters:		 [sym_table: STD, vid_offset: int, i_value: InitialValue]
+*  Return value:	 int: vid_offset or failure state
+*  Algorithm:
+*/
 int st_update_value(STD sym_table, int vid_offset, InitialValue i_value){
 	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
 		return RFAIL_INVALID_ST;
@@ -160,24 +214,149 @@ int st_update_value(STD sym_table, int vid_offset, InitialValue i_value){
 
 	sym_table.pstvr[vid_offset].i_value = i_value;
 	return vid_offset;
+}
+
+/* Purpose:			 Gets type of symbol at vid_offset of table by performing bitwise operations.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions:
+*  Parameters:		 [sym_table: STD, vid_offset: int, i_value: InitialValue]
+*  Return value:	 char: S, F, I or failure state
+*  Algorithm:
+*/
+char st_get_type(STD sym_table, int vid_offset){
+	unsigned short temp_sf;
+	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
+		return RFAIL_INVALID_ST;
+	if (vid_offset < 0 || vid_offset > sym_table.st_offset) return R_FAIL2;
+
+	temp_sf = sym_table.pstvr[vid_offset].status_field;
+	temp_sf &= ~SF_TYPEMASK; /* hide everything but the type */
+
+	switch (temp_sf){
+		case SF_STRING_TYPE:
+			return 'S';
+		case SF_FLOAT_TYPE:
+			return 'F';
+		case SF_INT_TYPE:
+			return 'I';
+		default:
+			return R_FAIL1;
+	}
 
 }
-char st_get_type(STD sym_table, int vid_offset){
-	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
-		return RFAIL_INVALID_ST;
-}
+
+/* Purpose:			 Frees up memory allocated for symbol table and nulls dangling pointers.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: free(), b_free(), st_setsize()
+*  Parameters:		 [sym_table: STD]
+*  Return value:	 void
+*  Algorithm:
+*/
 void st_destroy(STD sym_table){
+	int current_offset;
 	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
-		return RFAIL_INVALID_ST;
+		return;
+
+	/* free pstvr */
+	current_offset = sym_table.st_offset - 1; /* starting backwards like st_lookup */
+	for (; current_offset > -1; current_offset--){
+		sym_table.pstvr[current_offset].plex = NULL; /* null dangling pointers */
+	}
+	free(sym_table.pstvr);
+	sym_table.pstvr = NULL;
+
+	/* free sym table buffer */
+	b_free(sym_table.plsBD);
+	sym_table.plsBD = NULL;
+
+	st_setsize();
 }
+
+/* Purpose:			 Prints out the symbol table
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: printf()
+*  Parameters:		 [sym_table: STD]
+*  Return value:	 int number of entries printed
+*  Algorithm:
+*/
 int st_print(STD sym_table){
+	int current_offset;
+
 	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
 		return RFAIL_INVALID_ST;
+
+	printf("\nSymbol Table\n____________\n\nLine Number Variable Identifier\n");
+	for (current_offset = 0; current_offset < sym_table.st_offset; current_offset++){
+		printf("%2d          %s\n", sym_table.pstvr[current_offset].o_line, sym_table.pstvr[current_offset].plex);
+	}
+
+	return current_offset;
 }
+
+/* Purpose:			 Stores the symbol table to file
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: fopen(), st_get_type(), fprintf(), strlen(),, fclose(), printf()
+*  Parameters:		 [sym_table: STD]
+*  Return value:	 int number of entries saved
+*  Algorithm:
+*/
 int st_store(STD sym_table){
+	int current_offset;
+	FILE * st_fi;
+	char t;
+
 	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
 		return RFAIL_INVALID_ST;
+	if ((st_fi = fopen(ST_FILENAME, "wt")) == NULL) return R_FAIL1;
+
+	fprintf(st_fi, "%d ", sym_table.st_size);
+
+	for (current_offset = 0; current_offset < sym_table.st_offset; current_offset++){
+		t = st_get_type(sym_table, current_offset);
+		switch (t){
+			case 'S':
+				fprintf(st_fi, "%hX %d %s %d %d ",
+					sym_table.pstvr[current_offset].status_field,
+					strlen(sym_table.pstvr[current_offset].plex),
+					sym_table.pstvr[current_offset].plex,
+					sym_table.pstvr[current_offset].o_line,
+					sym_table.pstvr[current_offset].i_value.str_offset
+					);
+				break;
+			case 'F':
+				fprintf(st_fi, "%hX %d %s %d %.2f ",
+					sym_table.pstvr[current_offset].status_field,
+					strlen(sym_table.pstvr[current_offset].plex),
+					sym_table.pstvr[current_offset].plex,
+					sym_table.pstvr[current_offset].o_line,
+					sym_table.pstvr[current_offset].i_value.fpl_val
+					);
+				break;
+			case 'I':
+				fprintf(st_fi, "%hX %d %s %d %d ",
+					sym_table.pstvr[current_offset].status_field,
+					strlen(sym_table.pstvr[current_offset].plex),
+					sym_table.pstvr[current_offset].plex,
+					sym_table.pstvr[current_offset].o_line,
+					sym_table.pstvr[current_offset].i_value.int_val
+					);
+				break;
+			default:
+				return R_FAIL1;
+		}
+		/* status_field (in hex format), the length of the lexeme, the lexeme, the line number, and the initial value*/
+		
+			
+	}
+	fclose(st_fi);
+	printf("\nSymbol Table stored.\n"); /* success */
+	return current_offset;
 }
+
 int st_sort(STD sym_table, char s_order){
 	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
 		return RFAIL_INVALID_ST;
@@ -186,11 +365,29 @@ int st_sort(STD sym_table, char s_order){
 }
 
 /* internal functions */
+
+/* Purpose:			 Sets table size to 0.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: 
+*  Parameters:		 
+*  Return value:	 void
+*  Algorithm:
+*/
 static void st_setsize(void){
 	if (sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
 		return;
 	sym_table.st_size = 0;
 }
+
+/* Purpose:			 Increments global sym table offset.
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions:
+*  Parameters:
+*  Return value:	 void
+*  Algorithm:
+*/
 static void st_incoffset(void){
 	if (!sym_table.st_size || sym_table.pstvr == NULL || sym_table.plsBD == NULL) /* check st is valid */
 		return;

@@ -80,11 +80,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="buffer.c" />
-    <ClCompile Include="platy_st.c" />
+    <ClCompile Include="platy_tt.c" />
     <ClCompile Include="scanner.c" />
+    <ClCompile Include="stable.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buffer.h" />
+    <ClInclude Include="stable.h" />
     <ClInclude Include="table.h" />
     <ClInclude Include="token.h" />
   </ItemGroup>

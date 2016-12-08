@@ -8,7 +8,7 @@
 *  Purpose:		Implements the functions and logic required for the Scanner component of the compiler.
 *  Function List: aa_func03(), aa_func04(), aa_func05(), aa_func08(), aa_func12(), aa_func13(),
 *				  char_class(), get_next_state(), iskeyword(), discard_line(),
-*				  scanner_init(), mlwpar_next_token(),
+*				  scanner_init(), mlwpar_next_token(), validate_symbol_install()
 */
 
 /* The #define _CRT_SECURE_NO_WARNINGS should be used in MS Visual Studio projects
@@ -32,6 +32,7 @@
 #include "buffer.h"
 #include "token.h"
 #include "table.h"
+#include "stable.h"
 
 #define DEBUG  /* for conditional processing */
 #undef  DEBUG
@@ -43,6 +44,7 @@
 extern Buffer * str_LTBL; /*String literal table */
 int line; /* current line number of the source code */
 extern int scerrnum;     /* defined in platy_st.c - run-time error number */
+extern STD sym_table;
 
 /* Local(file) global objects - variables */
 static Buffer *lex_buf;/*pointer to temporary lexeme buffer*/
@@ -54,6 +56,7 @@ static int char_class(char c); /* character class function */
 static int get_next_state(int, char, int *); /* state machine function */
 static int iskeyword(char * kw_lexeme); /*keywords lookup function */
 static int discard_line(Buffer * sc_buf); /* discard end of line after comment*/
+static void validate_symbol_install(); /* error handling if trying to add a symbol to a full table */
 
 /* Purpose:			 Performs the init for the scanner buffer by resetting it and
 *					 the string literal buffer. Sets line to 1
@@ -398,8 +401,8 @@ int char_class (char c)
 /* Purpose:			 Checks if the lexeme is a keyword or an AVID, and accordingly sets
 *				     token fields.
 *  Author:			 Lucas Estienne
-*  History/Versions: [1.0 - 11/14/2016]
-*  Called functions: iskeyword(), sprintf_s()
+*  History/Versions: [1.1 - 12/01/2016]
+*  Called functions: iskeyword(), strlen(), validate_symbol_install(), st_install()
 *  Parameters:		 [lexeme: (char[])]
 *  Return value:	 [ (Token) ]
 *  Algorithm:
@@ -407,6 +410,7 @@ int char_class (char c)
 Token aa_func05(char lexeme[]){
 	Token t;
 	int is_kw;
+	char avid_type;
 
 	is_kw = iskeyword(lexeme);
 	if (is_kw != -1){
@@ -414,17 +418,22 @@ Token aa_func05(char lexeme[]){
 		t.attribute.kwt_idx = is_kw;
 		return t;
 	}
-	sprintf_s(t.attribute.vid_lex, VID_LEN + 1, "%.*s", VID_LEN, lexeme);
+
+	if (strlen(lexeme) > VID_LEN)
+		lexeme[VID_LEN] = '\0';
+
+	avid_type = (lexeme[0] == 'i' || lexeme[0] == 'o' || lexeme[0] == 'w' || lexeme[0] == 'd') ? 'I' : 'F';
 	t.code = AVID_T;
-	t.attribute.vid_lex[VID_LEN] = '\0';
+	t.attribute.vid_offset = st_install(sym_table, lexeme, avid_type, line);
+	validate_symbol_install(t.attribute.vid_offset);
 
 	return t;
 }
 
 /* Purpose:			 Returns the SVID token equivalent for the lexeme passed.
 *  Author:			 Lucas Estienne
-*  History/Versions: [1.0 - 11/14/2016]
-*  Called functions: sprintf_s()
+*  History/Versions: [1.1 - 12/01/2016]
+*  Called functions: strlen(), validate_symbol_install(), st_install()
 *  Parameters:		 [lexeme: (char[])]
 *  Return value:	 [ (Token) ]
 *  Algorithm:
@@ -432,10 +441,11 @@ Token aa_func05(char lexeme[]){
 Token aa_func04(char lexeme[]){
 	Token t;
 
-	sprintf_s(t.attribute.vid_lex, VID_LEN + 1, "%.*s", VID_LEN - 1, lexeme);
-	t.code = SVID_T;
-	t.attribute.vid_lex[VID_LEN - 1] = '%';
-	t.attribute.vid_lex[VID_LEN] = '\0';
+	if (strlen(lexeme) > VID_LEN)
+		lexeme[VID_LEN] = '\0';
+	lexeme[strlen(lexeme) - 1] = '%';
+	t.attribute.vid_offset = st_install(sym_table, lexeme, 'S', line);
+	validate_symbol_install(t.attribute.vid_offset);
 
 	return t;
 }
@@ -585,4 +595,20 @@ int discard_line(Buffer * sc_buf){
 		}
 	}
 	return 0;
+}
+
+/* Purpose:			 Checks that a vid_offset is valid, otherwise exit
+*  Author:			 Lucas Estienne
+*  History/Versions: [1.0 - 12/01/2016]
+*  Called functions: printf(), exit(), st_store()
+*  Parameters:		 [vid_offset: int]
+*  Return value:	 void
+*  Algorithm:
+*/
+void validate_symbol_install(int vid_offset){
+	if (vid_offset == -1){
+		printf("\nError: The Symbol Table is full - install failed.\n");
+		st_store(sym_table);
+		exit(1);
+	}
 }
