@@ -21,10 +21,13 @@
     <ClCompile Include="scanner.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="platy_tt.c">
+    <ClCompile Include="stable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stable.c">
+    <ClCompile Include="platy.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="parser.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -39,6 +42,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

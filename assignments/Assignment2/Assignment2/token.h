@@ -41,6 +41,16 @@
 #define COM_T    17  /* Comma token */
 #define EOS_T    18  /* End of statement *(semi - colon) */
 
+/* KW codes */
+#define ELSE 1
+#define IF 2
+#define INPUT 3
+#define OUTPUT 4
+#define PLATYPUS 5
+#define REPEAT 6
+#define THEN 7
+#define USING 8
+
 
 /* Operators token attributes */
 
@@ -58,11 +68,11 @@ typedef union TokenAttribute{
     Log_Op log_op;    /* logical operator attribute code */
     int int_value;    /* integer literal attribute (value) */
     int kwt_idx;      /* keyword index in the keyword table */	  
-    short str_offset; /* sring literal offset from the beginning of */
+    short str_offset; /* string literal offset from the beginning of */
 	              /* the string literal buffer (str_LTBL->cb_head) */
     float flt_value;  /* floating-point literal attribute (value) */
 	int vid_offset;
-    char err_lex[ERR_LEN+1]; /* error token attribite */
+    char err_lex[ERR_LEN+1]; /* error token attribute */
   } TA;
 
 typedef struct Token
