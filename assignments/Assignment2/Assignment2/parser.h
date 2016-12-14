@@ -13,14 +13,23 @@
 #ifndef  PARSER_H_
 #define  PARSER_H_ 
 
+#include "token.h"
 #include "stable.h"
 
 #ifndef NULL
 #include <_null.h> /* NULL pointer constant is defined there */
 #endif
 
-/* constants */
+/* KW codes */
 #define NO_ATTR -1
+#define ELSE 0
+#define IF 1
+#define INPUT 2
+#define OUTPUT 3
+#define PLATYPUS 4
+#define REPEAT 5
+#define THEN 6
+#define USING 7
 
 /* declare globals */
 static Token lookahead;
@@ -56,7 +65,14 @@ void input_statement(void);
 void output_statement(void);
 void selection_statement(void);
 
+void out_list(void);
 void variable_list(void);
+
+void assignment_expression(void);
+void arithmetic_expression(void);
+void conditional_expression(void);
+void string_expression(void);
+
 
 
 #endif

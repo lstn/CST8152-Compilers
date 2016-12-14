@@ -1,3 +1,13 @@
+/* File name:	parser.c
+*  Compiler:	MS Visual Studio 2013
+*  Author:		Lucas Estienne, 040 819 959
+*  Course:		CST 8152 - Compilers, Lab Section 012
+*  Assignment:	02
+*  Date:		15 December 2016
+*  Professor:   Svillen Ranev
+*  Purpose:		Implements the functions and logic required for the Parser component of the compiler.
+*  Function List:  
+*/
 
 /* The #define _CRT_SECURE_NO_WARNINGS should be used in MS Visual Studio projects
 * to suppress the warnings about using "unsafe" functions like fopen()
@@ -18,7 +28,6 @@
 
 /* project header files */
 #include "buffer.h"
-#include "token.h"
 #include "parser.h"
 
 #define DEBUG  /* for conditional processing */
@@ -150,38 +159,61 @@ void gen_incode(char *in_code){
 	printf("%s\n", in_code);
 }
 
-/* syntax prototypes */
+/**********************/
+/* syntax productions */
+/**********************/
 
+/*
+	<program>  ->
+		PLATYPUS { <opt_statements> }
+
+	FIRST set: { PLATYPUS }
+*/
 void program(void){
 	match(KW_T, PLATYPUS); match(LBR_T, NO_ATTR); opt_statements();
 	match(RBR_T, NO_ATTR);
 	gen_incode("PLATY: Program parsed");
 }
 
+/*
+	<opt_statements>  ->
+		<statements> | e
+
+	FIRST set: { AVID_T, SVID_T, KW_T(but not PLATYPUS, ELSE, THEN, REPEAT), e }
+*/
 void opt_statements(void){
-	/* FIRST set: {AVID_T,SVID_T,KW_T(but not … see above),e} */
 	switch (lookahead.code){
 		case AVID_T:
 		case SVID_T: statements(); break;
 		case KW_T:
 			/* check for PLATYPUS, ELSE, THEN, REPEAT here and in
 			statements_p()*/
-			if (lookahead.attribute.get_int != PLATYPUS
-				&& lookahead.attribute.get_int != ELSE
-				&& lookahead.attribute.get_int != THEN
-				&& lookahead.attribute.get_int != REPEAT){
+			if (lookahead.attribute.get_int != PLATYPUS && lookahead.attribute.get_int != ELSE
+					&& lookahead.attribute.get_int != THEN && lookahead.attribute.get_int != REPEAT){
 				statements();
 				break;
 			}
-		default: /*empty string – optional statements*/
+		default: /*empty string - optional statements*/
 			gen_incode("PLATY: Opt_statements parsed");
 	}
 }
 
+/*
+	<statements>  ->
+		<statement><statements_p>
+
+	FIRST set: { AVID_T, SVID_T, KW_T(but not PLATYPUS, ELSE, THEN, REPEAT) }
+*/
 void statements(void){
 	statement(); statements_p();
 }
 
+/*
+	<statements_p>  ->
+		<statement><statements_p> | e
+
+	FIRST set: { AVID_T, SVID_T, KW_T(but not PLATYPUS, ELSE, THEN, REPEAT), e}
+*/
 void statements_p(void){
 	switch (lookahead.code){
 		case AVID_T:
@@ -189,13 +221,28 @@ void statements_p(void){
 		case KW_T:
 			/* check for PLATYPUS, ELSE, THEN, REPEAT */
 			if (lookahead.attribute.get_int != PLATYPUS && lookahead.attribute.get_int != ELSE
-					&& lookahead.attribute.get_int != THEN && lookahead.attribute.get_int != REPEAT)
-			{ return; } else { break; } /* USING, IF, INPUT, OUTPUT */
+					&& lookahead.attribute.get_int != THEN && lookahead.attribute.get_int != REPEAT) {
+				statement(); 
+				statements_p(); 
+				break;
+			} else {
+				return; 
+			} /* USING, IF, INPUT, OUTPUT */
 		default: /* no match */
 			syn_printe();
 	}
 }
 
+/*
+	<statement>  ->
+		<assignment_statement>
+		| <iteration_statement>
+		| <selection_statement>
+		| <input_statement>
+		| <output_statement>
+
+	FIRST set: { AVID_T, SVID_T, KW_T(but not PLATYPUS, ELSE, THEN, REPEAT)}
+*/
 void statement(void){
 	switch (lookahead.code){
 		case AVID_T:
@@ -214,29 +261,121 @@ void statement(void){
 	}
 }
 
+/*
+	<assignment_statement> ->
+		<assignment_expression>
+
+	FIRST set: { AVID_T, SVID_T }
+*/
 void assignment_statement(void){
-
+	assignment_expression(); match(EOS_T, NO_ATTR);
+	gen_incode("PLATY: Assignment_statement parsed");
 }
 
+/*
+	<iteration statement> ->
+		USING  (<assignment_expression> , <conditional_expression> , <assignment_expression>)
+		REPEAT {
+			<opt_statements>
+		};
+
+	FIRST set: { USING }
+*/
 void iteration_statement(void){
+	match(KW_T, USING); match(LPR_T, NO_ATTR);
+	assignment_expression(); match(COM_T, NO_ATTR); conditional_expression();
+	match(COM_T, NO_ATTR); assignment_expression(); match(RPR_T, NO_ATTR);
 
+	match(KW_T, REPEAT); match(LBR_T, NO_ATTR); 
+	opt_statements(); match(RBR_T, NO_ATTR); match(EOS_T, NO_ATTR);
+	gen_incode("PLATY: Iteration_statement parsed");
 }
 
+/*
+	<input_statement> ->
+		INPUT (<variable_list>);
+
+	FIRST set: { INPUT }
+*/
 void input_statement(void){
 	match(KW_T, INPUT); match(LPR_T, NO_ATTR); variable_list();
 	match(RPR_T, NO_ATTR); match(EOS_T, NO_ATTR);
 	gen_incode("PLATY: Input statement parsed");
 }
 
-void output_statement(void){
+/*
+	<output statement> ->
+		OUTPUT (<out list>);
 
+	FIRST set: { OUTPUT }
+*/
+void output_statement(void){
+	match(KW_T, OUTPUT); match(LPR_T, NO_ATTR);
+	out_list();
+	match(RPR_T, NO_ATTR); match(EOS_T, NO_ATTR);
+	gen_incode("PLATY: Output_statement parsed");
 }
 
+/*
+	<selection_statement> ->
+		IF (<conditional_expression>)  THEN
+			<opt_statements>
+		ELSE { <opt_statements> } ;
+
+	FIRST set: { IF }
+*/
 void selection_statement(void){
+	match(KW_T, IF); match(LPR_T, NO_ATTR);
+	conditional_expression(); /* condition */
+	match(RPR_T, NO_ATTR);match(KW_T, THEN);
+	opt_statements(); /* if true */
+	match(KW_T, ELSE); match(LBR_T, NO_ATTR);
+	opt_statements(); /* else */
+	match(RBR_T, NO_ATTR); match(EOS_T, NO_ATTR);
+	gen_incode("PLATY: Selection_statement parsed");
+}
+
+void out_list(void){
 
 }
 
 void variable_list(void){
+
+}
+
+/*
+	<assignment_expression> ->
+		AVID = <arithmetic_expression>
+		| SVID = <string_expression>
+
+	FIRST set: { AVID_T, SVID_T }
+*/
+void assignment_expression(void){
+	switch (lookahead.code){
+	case AVID_T:
+		match(AVID_T, NO_ATTR); match(ASS_OP_T, NO_ATTR); /* AVID = ... */
+		arithmetic_expression();
+		break;
+	case SVID_T:
+		match(SVID_T, NO_ATTR); match(ASS_OP_T, NO_ATTR); /* SVID = ... */
+		string_expression();
+		break;
+	default: /* no match */
+		syn_printe();
+		return;
+	}
+	gen_incode("PLATY: Assignment_expression parsed");
+}
+
+void arithmetic_expression(void){
+
+}
+
+void conditional_expression(void){
+
+}
+
+void string_expression(void){
 
 }
 

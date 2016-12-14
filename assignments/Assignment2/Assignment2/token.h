@@ -41,16 +41,6 @@
 #define COM_T    17  /* Comma token */
 #define EOS_T    18  /* End of statement *(semi - colon) */
 
-/* KW codes */
-#define ELSE 1
-#define IF 2
-#define INPUT 3
-#define OUTPUT 4
-#define PLATYPUS 5
-#define REPEAT 6
-#define THEN 7
-#define USING 8
-
 
 /* Operators token attributes */
 
