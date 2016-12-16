@@ -51,12 +51,14 @@ void match(int pr_token_code, int pr_token_attribute){
 				if (lookahead.attribute.get_int != pr_token_attribute)
 					break; /* attributes do not match, break out */
 			default: /* match */
-				if (lookahead.attribute.get_int == SEOF_T)
+				if (lookahead.code == SEOF_T)
 					return;
-
+				printf("%d\n", lookahead.code);
 				/* code was not SEOF, advance to next input*/
 				lookahead = mlwpar_next_token(sc_buf);
-				if (lookahead.attribute.get_int == ERR_T){
+				printf("%d\n\n", lookahead.code);
+				if (lookahead.code == ERR_T){
+					printf("is error\n");
 					syn_printe();
 					lookahead = mlwpar_next_token(sc_buf);
 					++synerrno;
@@ -64,7 +66,7 @@ void match(int pr_token_code, int pr_token_attribute){
 				return; /* successfully matched */
 		}
 	}
-	
+	printf("syn_eh\n");
 	syn_eh(pr_token_code); /* unsuccessful match */
 }
 
@@ -195,6 +197,7 @@ void opt_statements(void){
 			}
 		default: /*empty string - optional statements*/
 			gen_incode("PLATY: Opt_statements parsed");
+			return;
 	}
 }
 
@@ -217,19 +220,19 @@ void statements(void){
 void statements_p(void){
 	switch (lookahead.code){
 		case AVID_T:
-		case SVID_T: statement(); statements_p(); break;
+		case SVID_T: statement(); statements_p(); return;
 		case KW_T:
 			/* check for PLATYPUS, ELSE, THEN, REPEAT */
 			if (lookahead.attribute.get_int != PLATYPUS && lookahead.attribute.get_int != ELSE
 					&& lookahead.attribute.get_int != THEN && lookahead.attribute.get_int != REPEAT) {
 				statement(); 
 				statements_p(); 
-				break;
+				return;
 			} else {
 				return; 
 			} /* USING, IF, INPUT, OUTPUT */
 		default: /* no match */
-			syn_printe();
+			syn_printe(); return;
 	}
 }
 
@@ -257,6 +260,7 @@ void statement(void){
 			}
 			break;
 		default: /* no match */
+			printf("no match 1");
 			syn_printe();
 	}
 }
@@ -282,12 +286,19 @@ void assignment_statement(void){
 	FIRST set: { KW_T(but only USING) }
 */
 void iteration_statement(void){
-	match(KW_T, USING); match(LPR_T, NO_ATTR);
-	assignment_expression(); match(COM_T, NO_ATTR); conditional_expression();
-	match(COM_T, NO_ATTR); assignment_expression(); match(RPR_T, NO_ATTR);
-
-	match(KW_T, REPEAT); match(LBR_T, NO_ATTR); 
-	opt_statements(); match(RBR_T, NO_ATTR); match(EOS_T, NO_ATTR);
+	match(KW_T, USING);
+	match(LPR_T, NO_ATTR);
+	assignment_expression();
+	match(COM_T, NO_ATTR);
+	conditional_expression();
+	match(COM_T, NO_ATTR);
+	assignment_expression();
+	match(RPR_T, NO_ATTR);
+	match(KW_T, REPEAT);
+	match(LBR_T, NO_ATTR);
+	opt_statements();
+	match(RBR_T, NO_ATTR);
+	match(EOS_T, NO_ATTR);
 	gen_incode("PLATY: Iteration_statement parsed");
 }
 
@@ -417,6 +428,7 @@ void assignment_expression(void){
 			string_expression();
 			break;
 		default: /* no match */
+			printf("no match 2");
 			syn_printe();
 			return;
 	}
@@ -478,7 +490,7 @@ void relational_expression(void){
 		case AVID_T: /* Arithmetic expressions */
 		case FPL_T:
 		case INL_T:
-			primary_a_relational_expression(); relational_operator(); primary_a_relational_expression();
+			primary_a_relational_expression(); relational_operator(); primary_a_relational_expression(); 
 			break;
 		case SVID_T: /* String expressions */
 		case STR_T:
@@ -514,26 +526,35 @@ void unary_arithmetic_expression(void){
 
 void additive_arithmetic_expression(void){
 	multiplicative_arithmetic_expression();
+	additive_arithmetic_expression_p();
+}
 
+void additive_arithmetic_expression_p(void){
 	if (lookahead.code == ART_OP_T){
 		if (lookahead.attribute.arr_op == MULT || lookahead.attribute.arr_op == DIV){
 			return; /* just return */
 		}
 		match(ART_OP_T, lookahead.attribute.arr_op);
-		additive_arithmetic_expression();
+		multiplicative_arithmetic_expression();
+		additive_arithmetic_expression_p();
 		gen_incode("PLATY: Additive_arithmetic_expression parsed");
 	}
 }
 
 void multiplicative_arithmetic_expression(void){
 	primary_arithmetic_expression();
+	multiplicative_arithmetic_expression_p();
 
+}
+
+void multiplicative_arithmetic_expression_p(void){
 	if (lookahead.code == ART_OP_T){
 		if (lookahead.attribute.arr_op == PLUS || lookahead.attribute.arr_op == MINUS){
 			return; /* just return */
 		}
 		match(ART_OP_T, lookahead.attribute.arr_op);
-		multiplicative_arithmetic_expression();
+		primary_arithmetic_expression();
+		multiplicative_arithmetic_expression_p();
 		gen_incode("PLATY: Multiplicative_arithmetic_expression parsed");
 	}
 }
@@ -542,7 +563,9 @@ void primary_arithmetic_expression(void){
 	switch (lookahead.code){
 		case AVID_T: /* Arithmetic expressions */
 		case FPL_T:
-		case INL_T: match(lookahead.code, lookahead.attribute.arr_op); break;
+		case INL_T: 
+			match(lookahead.code, lookahead.attribute.arr_op);
+			break;
 		case LPR_T: 
 			match(lookahead.code, lookahead.attribute.arr_op); 
 			arithmetic_expression();
@@ -570,17 +593,29 @@ void string_expression_p(void){
 }
 
 void logical_or_expression(void){
-	logical_and_expression(); logical_operator();
-	if (lookahead.attribute.log_op == OR){
-		logical_or_expression();
+	logical_and_expression();
+	logical_or_expression_p();
+}
+
+void logical_or_expression_p(void){
+	if (lookahead.code == LOG_OP_T && lookahead.attribute.log_op != AND){
+		match(LOG_OP_T, OR);
+		logical_and_expression();
+		logical_or_expression_p();
 		gen_incode("PLATY: Logical_or_expression parsed");
 	}
 }
 
 void logical_and_expression(void){
-	relational_expression(); logical_operator();
-	if (lookahead.attribute.log_op == AND){
-		logical_and_expression();
+	relational_expression(); 
+	logical_and_expression_p();
+}
+
+void logical_and_expression_p(void){
+	if (lookahead.code == LOG_OP_T && lookahead.attribute.log_op != OR){
+		match(LOG_OP_T, AND);
+		relational_expression();
+		logical_and_expression_p();
 		gen_incode("PLATY: Logical_and_expression parsed");
 	}
 }
@@ -616,22 +651,6 @@ void primary_a_relational_expression(void){
 void primary_s_relational_expression(void){
 	primary_string_expression();
 	gen_incode("PLATY: Primary_s_relational_expression parsed");
-}
-
-void logical_operator(void){
-	if (lookahead.code == LOG_OP_T){
-		switch (lookahead.attribute.log_op){
-			case AND: 
-			case OR:
-				match(LOG_OP_T, lookahead.attribute.log_op);
-				break;
-			default:
-				syn_printe(); /* unknown logical operator */
-		}
-	}
-	else {
-		syn_printe(); /* no match */
-	}
 }
 
 void relational_operator(void){

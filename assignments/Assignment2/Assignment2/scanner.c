@@ -411,7 +411,6 @@ Token aa_func05(char lexeme[]){
 	Token t;
 	int is_kw;
 	char avid_type;
-
 	is_kw = iskeyword(lexeme);
 	if (is_kw != -1){
 		t.code = KW_T;
@@ -440,10 +439,10 @@ Token aa_func05(char lexeme[]){
 */
 Token aa_func04(char lexeme[]){
 	Token t;
-
 	if (strlen(lexeme) > VID_LEN)
 		lexeme[VID_LEN] = '\0';
 	lexeme[strlen(lexeme) - 1] = '%';
+	t.code = SVID_T;
 	t.attribute.vid_offset = st_install(sym_table, lexeme, 'S', line);
 	validate_symbol_install(t.attribute.vid_offset);
 

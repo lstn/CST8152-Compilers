@@ -20,16 +20,20 @@
 #include <_null.h> /* NULL pointer constant is defined there */
 #endif
 
+enum
+{
+	ELSE,
+	IF,
+	INPUT,
+	OUTPUT,
+	PLATYPUS,
+	REPEAT,
+	THEN,
+	USING
+};
+
 /* KW codes */
 #define NO_ATTR -1
-#define ELSE 0
-#define IF 1
-#define INPUT 2
-#define OUTPUT 3
-#define PLATYPUS 4
-#define REPEAT 5
-#define THEN 6
-#define USING 7
 
 /* declare globals */
 static Token lookahead;
@@ -41,7 +45,7 @@ extern int line; /* line number */
 extern STD sym_table; /* symbol table */
 extern Buffer * str_LTBL; /*String literal table */
 extern char * kw_table[]; /* keyword table */
-extern Token mlwpar_next_token(Buffer * sc_buf);
+extern Token mlwpar_next_token(Buffer *);
 
 
 /* prototypes */
@@ -79,19 +83,22 @@ void relational_expression(void);
 
 void unary_arithmetic_expression(void);
 void additive_arithmetic_expression(void);
+void additive_arithmetic_expression_p(void);
 void multiplicative_arithmetic_expression(void);
+void multiplicative_arithmetic_expression_p(void);
 void primary_arithmetic_expression(void);
 
 void primary_string_expression(void);
 void string_expression_p(void);
 
 void logical_or_expression(void);
+void logical_or_expression_p(void);
 void logical_and_expression(void);
+void logical_and_expression_p(void);
 
 void primary_a_relational_expression(void);
 void primary_s_relational_expression(void);
 
-void logical_operator(void);
 void relational_operator(void);
 
 
