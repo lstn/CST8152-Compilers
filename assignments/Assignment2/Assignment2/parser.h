@@ -65,14 +65,34 @@ void input_statement(void);
 void output_statement(void);
 void selection_statement(void);
 
-void out_list(void);
+void output_list(void);
+void opt_variable_list(void);
 void variable_list(void);
+void variable_identifier(void);
+void variable_list_p(void);
 
 void assignment_expression(void);
 void arithmetic_expression(void);
-void conditional_expression(void);
 void string_expression(void);
+void conditional_expression(void);
+void relational_expression(void);
 
+void unary_arithmetic_expression(void);
+void additive_arithmetic_expression(void);
+void multiplicative_arithmetic_expression(void);
+void primary_arithmetic_expression(void);
+
+void primary_string_expression(void);
+void string_expression_p(void);
+
+void logical_or_expression(void);
+void logical_and_expression(void);
+
+void primary_a_relational_expression(void);
+void primary_s_relational_expression(void);
+
+void logical_operator(void);
+void relational_operator(void);
 
 
 #endif
