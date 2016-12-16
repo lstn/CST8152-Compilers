@@ -109,6 +109,7 @@ Token mlwpar_next_token(Buffer * sc_buf)
                 
 	while (continue_loop){ /* loops until token returns */
         c = b_getc(sc_buf);
+		/*printf("%c\n", c);*/
 		switch (c){
 			case ' ': /* whitespace */
 			case '\t':
