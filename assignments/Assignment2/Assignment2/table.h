@@ -35,7 +35,9 @@
  *  .AND., .OR. , SEOF, 'wrong symbol',
  */
 
-#define SEOF 255
+#define SEOF_N 255
+#define SEOF '\0'
+#define SEOF_H 0XFF
 
 #define ES 3 /* Error state */
 #define IS -1 /* Invalid state */

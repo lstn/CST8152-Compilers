@@ -109,19 +109,26 @@ Token mlwpar_next_token(Buffer * sc_buf)
                 
 	while (continue_loop){ /* loops until token returns */
         c = b_getc(sc_buf);
-		/*printf("%c\n", c);*/
+#ifdef DEBUG
+		printf("** Char to scan: %c\n", c);
+#endif
 		switch (c){
 			case ' ': /* whitespace */
 			case '\t':
 			case '\v':
 			case '\f':
-			case '\r': 
 				break;
+			case '\r': 
+				nextc = b_getc(sc_buf);
+				if (nextc != '\n'){
+					b_retract(sc_buf);
+				}
+
 			case '\n': /* newlines */
 				++line; /* only increment count, don't break loop */
 				break;
-			case '\0': /* null term / SEOF */
-			case SEOF:
+			case SEOF_N: /* 255 */
+			case SEOF: /* null term / SEOF */
 				t.code = SEOF_T;
 				continue_loop = 0; break;
 			case ';': /* EOS */
@@ -244,7 +251,7 @@ Token mlwpar_next_token(Buffer * sc_buf)
 
 				while (b_getcoffset(sc_buf) < b_size(sc_buf)){
 					nextc = b_getc(sc_buf);
-					if (nextc == '\0'){ /* null term */
+					if (nextc == SEOF_N || nextc == SEOF || nextc == EOF){ /* eof/null term */
 						t.code = ERR_T;
 						b_retract(sc_buf); /* go back one */
 						lexend = b_getcoffset(sc_buf); /* set lexend to current getcoffset */
@@ -316,6 +323,9 @@ Token mlwpar_next_token(Buffer * sc_buf)
 					continue_loop = 0; break;
 				}
 				lexstart = b_getcoffset(sc_buf) - 1; /* set lexstart and mark to getcoffset-1*/
+#ifdef DEBUG
+				printf("\t^^^^^^ %d\n", lexstart);
+#endif
 				b_setmark(sc_buf, lexstart);
 
 				do{ /* FSM 0 */
@@ -324,7 +334,10 @@ Token mlwpar_next_token(Buffer * sc_buf)
 					c = b_getc(sc_buf); /* FSM 2 */
 				} while (accept == NOAS); /* FSM 3 */
 				lexend = b_getcoffset(sc_buf); /* set lexend to getcoffset after exiting FSM */
-
+#ifdef DEBUG
+				printf("\tvvvvvv %d\n", lexend);
+				printf("\t-----> %d\n", lexend - lexstart + 2);
+#endif
 				lex_buf = b_create(lexend - lexstart + 2, 0, 'f'); /* create temporary buffer */
 				if (!lex_buf){ /* did we fail to create the buffer? */
 					scerrnum = 3;
@@ -333,8 +346,11 @@ Token mlwpar_next_token(Buffer * sc_buf)
 				}
 
 				if (accept == ASWR) --lexend; /* accept state with retracting, reduce lexend by 1 char */
-
-				b_retract_to_mark(sc_buf); /* retract to mark */
+#ifdef DEBUG
+				printf("!22! oc: %d lexend: %d\n", b_getcoffset(sc_buf), lexend);
+				printf("!!!! oc: %d lexend: %d\n", b_getcoffset(sc_buf), lexend);
+#endif
+				b_retract_to_mark(sc_buf);
 				while (b_getcoffset(sc_buf) < lexend) b_addc(lex_buf, b_getc(sc_buf)); /* keep adding to temp buffer until we reach lexend */
 				if (!b_addc(lex_buf, '\0')){ /* try to null term temporary buffer */
 					scerrnum = 4;
@@ -348,6 +364,9 @@ Token mlwpar_next_token(Buffer * sc_buf)
 				continue_loop = 0; break;
 		}
    } /* end loop */
+#ifdef DEBUG
+   printf("~~~%d\n", t.code);
+#endif
    return t; /* return token*/
 }
 
@@ -412,6 +431,9 @@ Token aa_func05(char lexeme[]){
 	Token t;
 	int is_kw;
 	char avid_type;
+#ifdef DEBUG
+	printf("*%*%* 05\n");
+#endif
 	is_kw = iskeyword(lexeme);
 	if (is_kw != -1){
 		t.code = KW_T;
@@ -440,6 +462,9 @@ Token aa_func05(char lexeme[]){
 */
 Token aa_func04(char lexeme[]){
 	Token t;
+#ifdef DEBUG
+	printf("*%*%* 04\n");
+#endif
 	if (strlen(lexeme) > VID_LEN)
 		lexeme[VID_LEN] = '\0';
 	lexeme[strlen(lexeme) - 1] = '%';
@@ -465,7 +490,9 @@ Token aa_func13(char lexeme[]){
 	float fl = strtof(lexeme, NULL);
 	char* check;
 	int declen, i, zero_count = 0;
-	
+#ifdef DEBUG
+	printf("*%*%* 13\n");
+#endif
 	if (lexeme[0] == '0' && lexeme[1] == '.'){ /* calculate number of 0s after the decimal*/
 		check = lexeme + 2;
 		declen = strlen(check);
@@ -497,7 +524,9 @@ Token aa_func13(char lexeme[]){
 Token aa_func08(char lexeme[]){
 	Token t;
 	int dec = (int)strtol(lexeme, NULL, 10); /* get decimal base 10 value from base10 lexeme string */
-
+#ifdef DEBUG
+	printf("*%*%* 08\n");
+#endif
 	if (dec > SHRT_MAX || dec < SHRT_MIN){ /* is our DIL within bounds? */
 		t.code = ERR_T;
 		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme); /* error text*/
@@ -523,7 +552,9 @@ Token aa_func08(char lexeme[]){
 Token aa_func12(char lexeme[]){
 	Token t;
 	int dec = (int) strtol(lexeme, NULL, 8); /* get decimal base 10 value from base 8 octal lexeme string */
-
+#ifdef DEBUG
+	printf("*%*%* 12\n");
+#endif
 	if (dec > SHRT_MAX || dec < SHRT_MIN){ /* is our DIL within bounds? */
 		t.code = ERR_T;
 		sprintf_s(t.attribute.err_lex, ERR_LEN + 1, "%.*s", ERR_LEN, lexeme); /* error text*/
@@ -547,7 +578,9 @@ Token aa_func12(char lexeme[]){
 */
 Token aa_func03(char lexeme[]){
 	Token t;
-
+#ifdef DEBUG
+	printf("*%*%* 03\n");
+#endif
 	t.code = ERR_T;
 	sprintf_s(t.attribute.err_lex, ERR_LEN+1, "%.*s", ERR_LEN, lexeme);
 	t.attribute.err_lex[ERR_LEN] = '\0';
@@ -565,6 +598,9 @@ Token aa_func03(char lexeme[]){
 */
 int iskeyword(char * kw_lexeme){
 	int i;
+#ifdef DEBUG
+	printf("iskw: %s\n", kw_lexeme);
+#endif
 	for (i = 0; i < KWT_SIZE; i++){
 		if (strcmp(kw_lexeme, kw_table[i]) == 0) {
 			return i; /* return current index */

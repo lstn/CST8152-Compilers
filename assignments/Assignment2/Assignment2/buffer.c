@@ -289,11 +289,11 @@ short b_capacity(Buffer * const pBD){
 *  Algorithm:
 */
 short b_setmark(Buffer * const pBD, short mark){
-	if (!pBD || (!pBD->addc_offset && pBD->addc_offset != 0)) return R_FAIL1; /* check that offset exists */
-	if (mark < 0 || mark > pBD->addc_offset) return R_FAIL1; /* 0 to addc_offset inclusive */
-
-	pBD->mark_offset = mark;
-	return pBD->mark_offset;
+	if (pBD != NULL && mark >= 0 && mark <= pBD->capacity) { /* 0 to addc_offset inclusive */
+		pBD->mark_offset = mark;
+		return mark;
+	}
+	return R_FAIL1;
 }
 
 /* Purpose:			 Returns the passed Buffer's current mark offset position. Returns
@@ -566,8 +566,7 @@ short b_retract(Buffer * const pBD){
 *  Algorithm:
 */
 short b_retract_to_mark(Buffer * const pBD){
-	if (!pBD || (!pBD->getc_offset && pBD->getc_offset != 0)) return R_FAIL1; /* check that offset exists */
-	if (!pBD->mark_offset || pBD->mark_offset < 0) return R_FAIL1; /* can't go negative */
+	if (pBD == NULL) return R_FAIL1;
 
 	pBD->getc_offset = pBD->mark_offset;
 	return pBD->getc_offset;

@@ -539,7 +539,6 @@ void relational_expression(void){
 			break;
 		default:
 			syn_printe(); /* no match */
-			return; /* ... */
 	}
 	gen_incode("PLATY: Relational_expression parsed");
 }
@@ -658,8 +657,10 @@ void primary_arithmetic_expression(void){
 void primary_string_expression(void){
 	if (lookahead.code == STR_T || lookahead.code == SVID_T){
 		match(lookahead.code, lookahead.attribute.arr_op);
-		gen_incode("PLATY: Primary_string_expression parsed");
+	} else {
+		syn_printe();
 	}
+	gen_incode("PLATY: Primary_string_expression parsed");
 }
 
 /*
@@ -746,7 +747,6 @@ void primary_a_relational_expression(void){
 			break;
 		default:
 			syn_printe(); /* no match */
-			return;
 	}
 	gen_incode("PLATY: Primary_a_relational_expression parsed");
 }

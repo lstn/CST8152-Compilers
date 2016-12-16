@@ -184,7 +184,7 @@ if (argc == 5){
 		exit(EXIT_FAILURE);
 	}
 
-/*registrer exit function */	
+/*register exit function */	
  atexit(garbage_collect);
 	
 /*Testbed for buffer, scanner,symbol table and parser*/
