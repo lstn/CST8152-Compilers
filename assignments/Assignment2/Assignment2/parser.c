@@ -54,7 +54,6 @@ void parser(Buffer* in_buf){
 	sc_buf = in_buf;
 	lookahead = mlwpar_next_token(sc_buf);
 	program(); match(SEOF_T, NO_ATTR);
-	gen_incode("PLATY: Source file parsed");
 }
 
 /* Purpose:			 Matches two tokens: the current input token (lookahead) and the
@@ -66,28 +65,134 @@ void parser(Buffer* in_buf){
 *  Algorithm:
 */
 void match(int pr_token_code, int pr_token_attribute){
-	if (lookahead.code == pr_token_code){
-		switch (pr_token_code){
-			case KW_T:
-			case LOG_OP_T:
-			case ART_OP_T:
-			case REL_OP_T:
-				if (lookahead.attribute.get_int != pr_token_attribute)
-					break; /* attributes do not match, break out */
-			default: /* match */
-				if (lookahead.code == SEOF_T)
-					return;
+	char ple[VID_LEN];
 
-				/* code was not SEOF, advance to next input*/
-				lookahead = mlwpar_next_token(sc_buf);
-				if (lookahead.code == ERR_T){
-					syn_printe();
-					lookahead = mlwpar_next_token(sc_buf);
-					++synerrno;
-				}
-				return; /* successfully matched */
-		}
+	switch (lookahead.code){
+		case SEOF_T:
+			return;
+		case AVID_T: /* AVID_T    2   Arithmetic Variable identifier token */
+			if (vs_contains(var_stack, lookahead.attribute.get_int) == -2){
+				vs_push(var_stack, lookahead.attribute.get_int);
+				gen_incode("void *");
+				gen_incode(sym_table.pstvr[lookahead.attribute.get_int].plex);
+				/*gen_incode("; \n");*/
+			} else {
+				gen_incode(sym_table.pstvr[lookahead.attribute.get_int].plex);
+			}
+
+			break;
+		case SVID_T:/* SVID_T    3  String Variable identifier token */
+			strncpy(ple, sym_table.pstvr[lookahead.attribute.get_int].plex, strlen(sym_table.pstvr[lookahead.attribute.get_int].plex) - 1);
+			ple[strlen(sym_table.pstvr[lookahead.attribute.get_int].plex) - 1] = '\0';
+			if (vs_contains(var_stack, lookahead.attribute.get_int) == -2){
+				vs_push(var_stack, lookahead.attribute.get_int);
+				gen_incode("char *");
+				gen_incode(ple);
+				/*gen_incode("; \n");*/
+			} else {
+				gen_incode(ple);
+			}
+			break;
+		case FPL_T: /* FPL_T     4  Floating point literal token */
+			printf("%5.1f", lookahead.attribute.flt_value);
+			break;
+		case INL_T: /* INL_T      5   Integer literal token */
+			printf("%d", lookahead.attribute.get_int);
+			break;
+		case STR_T:/* STR_T     6   String literal token */
+			printf("\"%s\"", b_cbhead(str_LTBL) + lookahead.attribute.str_offset);
+			break;
+		case SCC_OP_T: /* 7   String concatenation operator token */
+			gen_incode(" # ");
+			break;
+		case ASS_OP_T:/* ASS_OP_T  8   Assignment operator token */
+			gen_incode(" = ");
+			break;
+		case ART_OP_T:/* ART_OP_T  9   Arithmetic operator token */
+			switch (lookahead.attribute.get_int){
+				case PLUS: gen_incode(" + "); break;
+				case MINUS: gen_incode(" - "); break;
+				case MULT: gen_incode(" * "); break;
+				case DIV: gen_incode(" / "); break;
+			}
+			break;
+		case REL_OP_T: /*REL_OP_T  10   Relational operator token */
+			switch (lookahead.attribute.get_int){
+				case EQ: gen_incode(" == "); break;
+				case NE: gen_incode(" != "); break;
+				case GT: gen_incode(" > "); break;
+				case LT: gen_incode(" < "); break;
+			}
+			break;
+		case LOG_OP_T:/*LOG_OP_T 11  Logical operator token */
+			switch (lookahead.attribute.get_int){
+				case AND: gen_incode(" && "); break;
+				case OR: gen_incode(" || "); break;
+			}
+			break;
+		case LPR_T: /*LPR_T    12  Left parenthesis token */
+			gen_incode("(");
+			break;
+		case RPR_T: /*RPR_T    13  Right parenthesis token */
+			gen_incode(")");
+			break;
+		case LBR_T: /*    14   Left brace token */
+			gen_incode("{ \n");
+			indent_tabs++;
+			break;
+		case RBR_T: /*    15  Right brace token */
+			gen_incode("}");
+			indent_tabs--;
+			break;
+		case KW_T: /*     16   Keyword token */
+			/*printf("%s\n", kw_table[lookahead.attribute.get_int]);*/
+			switch (lookahead.attribute.get_int){
+				case PLATYPUS:
+					gen_incode("\nint main(void) ");
+					break;
+				case USING:
+					gen_incode("for");
+					break;
+				case INPUT:
+					gen_incode("input");
+					break;
+				case IF:
+					gen_incode("if ");
+					break;
+				case ELSE:
+					gen_incode("} else ");
+					break;
+				case OUTPUT:
+					gen_incode("printf");
+					break;
+				case THEN:
+					gen_incode("{");
+			}
+			break;
+		case COM_T: /* 17   Comma token */
+			gen_incode(", ");
+			break;
+		case EOS_T: /*    18  End of statement *(semi - colon) */
+			gen_incode("; \n");
+			break;
+		default:
+			printf(" /*PLATY: Scanner error: invalid token code: %d */ ", lookahead.code);
 	}
+	if (lookahead.code == pr_token_code){
+		if (lookahead.code == SEOF_T){
+			return;
+		}
+
+		/* code was not SEOF, advance to next input*/
+		lookahead = mlwpar_next_token(sc_buf);
+		if (lookahead.code == ERR_T){
+			syn_printe();
+			lookahead = mlwpar_next_token(sc_buf);
+			++synerrno;
+		}
+		return; /* successfully matched */
+	}
+
 	syn_eh(pr_token_code); /* unsuccessful match */
 }
 
@@ -198,7 +303,18 @@ void syn_printe(){
 *  Algorithm:
 */
 void gen_incode(char *in_code){
-	printf("%s\n", in_code);
+	printf("%s", in_code);
+}
+
+/* Purpose:			 Takes a string from the argument and prints it
+*  Author:			 Lucas Estienne
+*  Called functions: printf()
+*  Parameters:		 [in_code: char *]
+*  Return value:	 void
+*  Algorithm:
+*/
+void gen_ic_indent(char *in_code){
+	printf("%.*s%s", indent_tabs, "\t\t\t\t\t\t\t\t\t", in_code);
 }
 
 /**********************/
@@ -213,8 +329,8 @@ void gen_incode(char *in_code){
 */
 void program(void){
 	match(KW_T, PLATYPUS); match(LBR_T, NO_ATTR); opt_statements();
-	match(RBR_T, NO_ATTR);
-	gen_incode("PLATY: Program parsed");
+	gen_incode("\treturn 0;\n");  match(RBR_T, NO_ATTR);
+	/*gen_incode("PLATY: Program parsed");*/
 }
 
 /*
@@ -237,7 +353,7 @@ void opt_statements(void){
 			}
 			break;
 		default: /*empty string - optional statements*/
-			gen_incode("PLATY: Opt_statements parsed");
+			/*gen_incode("PLATY: Opt_statements parsed");*/
 			return;
 	}
 }
@@ -311,7 +427,7 @@ void statement(void){
 */
 void assignment_statement(void){
 	assignment_expression(); match(EOS_T, NO_ATTR);
-	gen_incode("PLATY: Assignment_statement parsed");
+	/*gen_incode("PLATY: Assignment_statement parsed");*/
 }
 
 /*
@@ -332,7 +448,7 @@ void iteration_statement(void){
 	match(RPR_T, NO_ATTR); match(KW_T, REPEAT); match(LBR_T, NO_ATTR);
 	opt_statements(); match(RBR_T, NO_ATTR); match(EOS_T, NO_ATTR);
 
-	gen_incode("PLATY: Iteration_statement parsed");
+	/*gen_incode("PLATY: Iteration_statement parsed");*/
 }
 
 /*
@@ -344,7 +460,7 @@ void iteration_statement(void){
 void input_statement(void){
 	match(KW_T, INPUT); match(LPR_T, NO_ATTR); variable_list();
 	match(RPR_T, NO_ATTR); match(EOS_T, NO_ATTR);
-	gen_incode("PLATY: Input statement parsed");
+	/*gen_incode("PLATY: Input statement parsed");*/
 }
 
 /*
@@ -357,7 +473,7 @@ void output_statement(void){
 	match(KW_T, OUTPUT); match(LPR_T, NO_ATTR);
 	output_list();
 	match(RPR_T, NO_ATTR); match(EOS_T, NO_ATTR);
-	gen_incode("PLATY: Output_statement parsed");
+	/*gen_incode("PLATY: Output_statement parsed");*/
 }
 
 /*
@@ -376,7 +492,7 @@ void selection_statement(void){
 	match(KW_T, ELSE); match(LBR_T, NO_ATTR);
 	opt_statements(); /* else */
 	match(RBR_T, NO_ATTR); match(EOS_T, NO_ATTR);
-	gen_incode("PLATY: Selection_statement parsed");
+	/*gen_incode("PLATY: Selection_statement parsed");*/
 }
 
 /*
@@ -388,7 +504,7 @@ void selection_statement(void){
 void output_list(void){
 	if (lookahead.code == STR_T){
 		match(STR_T, NO_ATTR);
-		gen_incode("PLATY: STR_T Output_list parsed");
+		/*gen_incode("PLATY: STR_T Output_list parsed");*/
 	} else {
 		opt_variable_list();
 	}
@@ -401,7 +517,7 @@ void output_list(void){
 	FIRST set: { AVID_T, SVID_T, E }
 */
 void opt_variable_list(void){
-	(lookahead.code == AVID_T || lookahead.code == SVID_T) ? variable_list() : gen_incode("PLATY: Empty Opt_variable_list parsed");
+	if (lookahead.code == AVID_T || lookahead.code == SVID_T) variable_list(); /*gen_incode("PLATY: Empty Opt_variable_list parsed")*/
 }
 
 /*
@@ -412,7 +528,7 @@ void opt_variable_list(void){
 */
 void variable_list(void){
 	variable_identifier(); variable_list_p();
-	gen_incode("PLATY: Variable_list parsed.");
+	/*gen_incode("PLATY: Variable_list parsed")*/;
 }
 
 /*
@@ -424,7 +540,7 @@ void variable_list(void){
 void variable_identifier(void){
 	if (lookahead.code == AVID_T || lookahead.code == SVID_T) {
 		match(lookahead.code, NO_ATTR);
-		gen_incode("PLATY: Variable_identifier parsed.");
+		/*gen_incode("PLATY: Variable_identifier parsed");*/
 		return; /* return so we skip the syn_printe() call*/
 	}
 	syn_printe(); /* no match */
@@ -440,7 +556,7 @@ void variable_list_p(void){
 	if (lookahead.code == COM_T){
 		match(COM_T, NO_ATTR);
 		variable_identifier(); variable_list_p();
-		gen_incode("PLATY: Variable_list parsed.");
+		/*gen_incode("PLATY: Variable_list parsed");*/
 	}
 }
 
@@ -465,7 +581,7 @@ void assignment_expression(void){
 			syn_printe();
 			return;
 	}
-	gen_incode("PLATY: Assignment_expression parsed");
+	/*gen_incode("PLATY: Assignment_expression parsed");*/
 }
 
 /*
@@ -494,7 +610,7 @@ void arithmetic_expression(void){
 			syn_printe();
 			return;
 	}
-	gen_incode("PLATY: Arithmetic_expression parsed");
+	/*gen_incode("PLATY: Arithmetic_expression parsed");*/
 }
 
 /*
@@ -505,7 +621,7 @@ void arithmetic_expression(void){
 */
 void string_expression(void){
 	primary_string_expression(); string_expression_p();
-	gen_incode("PLATY: String_expression parsed");
+	/*gen_incode("PLATY: String_expression parsed");*/
 }
 
 /*
@@ -515,7 +631,7 @@ void string_expression(void){
 	FIRST set: { AVID_T, FPL_T, INL_T, SVID_T, STR_T }
 */
 void conditional_expression(void){
-	logical_or_expression(); gen_incode("PLATY: Conditional_expression parsed");
+	logical_or_expression(); /*gen_incode("PLATY: Conditional_expression parsed");*/
 }
 
 /*
@@ -540,7 +656,7 @@ void relational_expression(void){
 		default:
 			syn_printe(); /* no match */
 	}
-	gen_incode("PLATY: Relational_expression parsed");
+	/*gen_incode("PLATY: Relational_expression parsed");*/
 }
 
 /*
@@ -558,7 +674,7 @@ void unary_arithmetic_expression(void){
 		}
 		match(ART_OP_T, lookahead.attribute.arr_op);
 		primary_arithmetic_expression();
-		gen_incode("PLATY: Unary_arithmetic_expression parsed");
+		/*gen_incode("PLATY: Unary_arithmetic_expression parsed");*/
 	} else {
 		syn_printe(); /* no match */
 	}
@@ -589,7 +705,7 @@ void additive_arithmetic_expression_p(void){
 		match(ART_OP_T, lookahead.attribute.arr_op);
 		multiplicative_arithmetic_expression();
 		additive_arithmetic_expression_p();
-		gen_incode("PLATY: Additive_arithmetic_expression parsed");
+		/*gen_incode("PLATY: Additive_arithmetic_expression parsed");*/
 	}
 }
 
@@ -619,7 +735,7 @@ void multiplicative_arithmetic_expression_p(void){
 		match(ART_OP_T, lookahead.attribute.arr_op);
 		primary_arithmetic_expression();
 		multiplicative_arithmetic_expression_p();
-		gen_incode("PLATY: Multiplicative_arithmetic_expression parsed");
+		/*gen_incode("PLATY: Multiplicative_arithmetic_expression parsed");*/
 	}
 }
 
@@ -645,7 +761,7 @@ void primary_arithmetic_expression(void){
 			syn_printe(); /* no match */
 			return;
 	}
-	gen_incode("PLATY: Primary_arithmetic_expression parsed");
+	/*gen_incode("PLATY: Primary_arithmetic_expression parsed");*/
 }
 
 /*
@@ -660,7 +776,7 @@ void primary_string_expression(void){
 	} else {
 		syn_printe();
 	}
-	gen_incode("PLATY: Primary_string_expression parsed");
+	/*gen_incode("PLATY: Primary_string_expression parsed");*/
 }
 
 /*
@@ -674,7 +790,7 @@ void string_expression_p(void){
 		match(SCC_OP_T, NO_ATTR);
 		primary_string_expression();
 		string_expression_p();
-		gen_incode("PLATY: String_expression_p parsed");
+		/*gen_incode("PLATY: String_expression_p parsed");*/
 	}
 }
 
@@ -700,7 +816,7 @@ void logical_or_expression_p(void){
 		match(LOG_OP_T, OR);
 		logical_and_expression();
 		logical_or_expression_p();
-		gen_incode("PLATY: Logical_or_expression parsed");
+		/*gen_incode("PLATY: Logical_or_expression parsed");*/
 	}
 }
 
@@ -726,7 +842,7 @@ void logical_and_expression_p(void){
 		match(LOG_OP_T, AND);
 		relational_expression();
 		logical_and_expression_p();
-		gen_incode("PLATY: Logical_and_expression parsed");
+		/*gen_incode("PLATY: Logical_and_expression parsed");*/
 	}
 }
 
@@ -748,7 +864,7 @@ void primary_a_relational_expression(void){
 		default:
 			syn_printe(); /* no match */
 	}
-	gen_incode("PLATY: Primary_a_relational_expression parsed");
+	/*gen_incode("PLATY: Primary_a_relational_expression parsed");*/
 }
 
 /*
@@ -759,7 +875,7 @@ void primary_a_relational_expression(void){
 */
 void primary_s_relational_expression(void){
 	primary_string_expression();
-	gen_incode("PLATY: Primary_s_relational_expression parsed");
+	/*gen_incode("PLATY: Primary_s_relational_expression parsed");*/
 }
 
 /*
@@ -779,7 +895,7 @@ void relational_operator(void){
 			case GT:
 			case LT: 
 				match(REL_OP_T, lookahead.attribute.rel_op); 
-				gen_incode("PLATY: Relational_operator parsed");
+				/*gen_incode("PLATY: Relational_operator parsed");*/
 				break;
 			default:
 				syn_printe(); /* unknown relational operator */

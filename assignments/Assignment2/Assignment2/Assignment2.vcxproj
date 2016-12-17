@@ -84,6 +84,7 @@
     <ClCompile Include="platy.c" />
     <ClCompile Include="scanner.c" />
     <ClCompile Include="stable.c" />
+    <ClCompile Include="varstack.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buffer.h" />
@@ -91,6 +92,7 @@
     <ClInclude Include="stable.h" />
     <ClInclude Include="table.h" />
     <ClInclude Include="token.h" />
+    <ClInclude Include="varstack.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

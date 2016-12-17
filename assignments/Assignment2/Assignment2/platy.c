@@ -23,6 +23,7 @@
 #include "token.h"
 #include "stable.h" /*Do not remove this line. SiR */
 #include "stable.h" /*Do not remove this line. SiR */
+#include "varstack.h"
 /* Input buffer parameters */
 #define INIT_CAPACITY 200 /* initial buffer capacity */
 #define INC_FACTOR 15       /* increment factor */
@@ -45,6 +46,7 @@ Buffer * str_LTBL; /* this buffer implements String Literal Table */
                   /* it is used as a repository for string literals */
 int scerrnum;     /* run-time error number = 0 by default (ANSI) */
 STD sym_table;    /* Symbol Table Descriptor */
+VarStack * var_stack;
 /*external objects */
 extern int synerrno /* number of syntax errors reported by the parser */;
 extern int line; /* source code line number - defined in scanner.c */
@@ -154,13 +156,16 @@ if (argc == 5){
     exit (EXIT_FAILURE);
   }
 
+/* create varstack */
+  var_stack = vs_create();
+
 /*open source file */
 	if ((fi = fopen(argv[1],"r")) == NULL){
 		err_printf("%s%s%s%s",argv[0],": ", "Cannot open file: ",argv[1]);
 		exit (1);
 	}
 /* load source file into input buffer  */
-     printf("Reading file %s ....Please wait\n",argv[1]);
+     /*printf("Reading file %s ....Please wait\n",argv[1]);*/
      loadsize = b_load (fi,sc_buf);
      if(loadsize == R_FAIL1)
        err_printf("%s%s%s",argv[0],": ","Error in loading buffer.");
@@ -169,14 +174,16 @@ if (argc == 5){
  	fclose(fi);
 /*find the size of the file  */
     if (loadsize == LOAD_FAIL){
-     printf("The input file %s %s\n", argv[1],"is not completely loaded.");
-     printf("Input file size: %ld\n", get_filesize(argv[1]));
+     printf("/* The input file %s %s */\n", argv[1],"is not completely loaded.");
+     printf("/* Input file size: %ld */\n", get_filesize(argv[1]));
     }
 /* pack and display the source buffer */
 
+	b_pack(sc_buf);
+/*
        if(b_pack(sc_buf)){
          display(sc_buf);
-  }
+	   }*/
 /* create string Literal Table */
   str_LTBL = b_create(INIT_CAPACITY,INC_FACTOR,'a');
 	if (str_LTBL == NULL){
@@ -194,7 +201,7 @@ if (argc == 5){
 /* Add SEOF to input buffer */ 
 	b_addc(sc_buf, EOF);
 /* Start parsing */
-	printf("\nParsing the source file...\n\n");
+	/*printf("\nParsing the source file...\n\n");*/
 	
         parser(sc_buf);
         
@@ -255,12 +262,11 @@ void display (Buffer *ptrBuffer){
 
 /* the functions frees the allocated memory */
 void garbage_collect(void){
-  if(synerrno)
-    printf("\nSyntax errors: %d\n",synerrno);
-  printf("\nCollecting garbage...\n");
+  synerrno > 0 ? printf("/* \nSyntax errors: %d */\n\0",synerrno) : printf("\n\0");
   b_free(sc_buf);
   b_free(str_LTBL);  
   st_destroy(sym_table);
+  free(var_stack);
 }
 
 

@@ -15,6 +15,7 @@
 
 #include "token.h"
 #include "stable.h"
+#include "varstack.h"
 
 #ifndef NULL
 #include <_null.h> /* NULL pointer constant is defined there */
@@ -39,6 +40,7 @@ enum
 static Token lookahead;
 static Buffer *sc_buf;
 int synerrno = 0;
+int indent_tabs = 1;
 
 /* externals */
 extern int line; /* line number */
@@ -46,7 +48,7 @@ extern STD sym_table; /* symbol table */
 extern Buffer * str_LTBL; /*String literal table */
 extern char * kw_table[]; /* keyword table */
 extern Token mlwpar_next_token(Buffer *);
-
+extern VarStack * var_stack;
 
 /* prototypes */
 void parser(Buffer* in_buf);
@@ -54,6 +56,7 @@ void match(int pr_token_code, int pr_token_attribute);
 void syn_eh(int sync_token_code);
 void syn_printe(void);
 void gen_incode(char *in_code);
+void gen_ic_indent(char *in_code);
 
 /* syntax prototypes */
 void program(void);
